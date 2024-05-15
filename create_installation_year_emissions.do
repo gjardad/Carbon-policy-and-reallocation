@@ -3,6 +3,15 @@ Creates data set at the installation-year level with information on
 1. emissions
 2. BvD id
 
+TO-DOs/Observations:
+
+1. there are some installations for which bvdid in OHA is not the same as bvdid in FOHA.
+   for all such installations, we are currently using the bvdid as in their OHA
+   
+2. there are some duplicates (in installation_id and year) in compliance data set.
+   for now we are dropping the obs within a duplicate with the LOWEST level of emissions
+   this is arbitrary
+
 GJ
 *******************************************************************************/
 
@@ -36,7 +45,6 @@ global proc_data "${dropbox}/carbon_policy_reallocation/data/processed"
 	
 	keep installation_id nace_id activity_id
 
-
 *------------------------------
 * Read in account (and bvdid) info
 *------------------------------
@@ -51,22 +59,22 @@ preserve
 	// and we dont care about aircraft accounts (type 100-9)
 	
 	g mi_instid = missing(installation_id)
-	sum mi_instid // we dont know installation for about 6% of those accounts
-	tab accounttype_id if mi_instid == 1 // and they are all "120-0" accounts
+	*sum mi_instid // we dont know installation for about 6% of those accounts
+	*tab accounttype_id if mi_instid == 1 // and they are all "120-0" accounts
 
 	keep if !missing(installation_id)
 	
 	keep installation_id bvdid accounttype_id // obs uniquely identified by installation_id and accounttype_id
 	
 	bysort installation_id (bvdid): gen bvdid_consistent = bvdid[1] == bvdid[_N]
-	tab bvdid_consistent // most of obs who share installation_id also share bvdid, but not all
+	*tab bvdid_consistent // most of obs who share installation_id also share bvdid, but not all
 	
 	drop if bvdid_consistent == 1 & accounttype_id == "120-0" // for those accounts, bvdid is unambiguous
 	
 	bysort installation_id (bvdid): gen bvdid_120 = bvdid[1] == "120-0"
 	// there are no installation_id for which the only account type is a former account (this is reassuring!)
 	
-	drop if accounttype_id == "120-0" // for now, let's focus only on the 100-7.
+	drop if accounttype_id == "120-0" // FOR NOW, let's focus only on the 100-7.
 	// then, installation_id uniquely identifies accounts
 	
 	drop bvdid_120 bvdid_consistent accounttype_id
@@ -75,7 +83,7 @@ preserve
 restore
 
 *------------------------------
-* Merge account info to obtain bvdid
+* Merge account info with installation info
 *------------------------------
 
 	merge 1:1 installation_id using "`account'"
@@ -83,7 +91,6 @@ restore
 	drop if _merge == 1 // this seems to be irrelavant installations
 
 	drop _merge
-
 
 *------------------------------
 * Read in compliance info
@@ -93,13 +100,27 @@ restore
 	
 	keep if year <= 2022
 	
-	g mi_em = missing(verified)
-	sum mi_em // info on emissions is missing for ~60% of installation-year obs
+	keep installation_id year verified
 	
-	keep if !missing(verified)
+	bysort installation_id (year): gen starts_2005 = year[1] == 2005
+	drop if starts_2005 == 0 // this is a different type of account that we are not interested on (my guess is that this is country level info)
+	
+	bysort installation_id (year): gen mi_2005 = missing(verified[1])
+	// a lot of those for which emissions are missing in 2005 are installations for which info starts in 2013
+	// an year with big changes in EUETS' regulation
+	
+	duplicates tag installation_id year verified, generate(dup1)
+	*tab dup1 // around 1.9% of installation-year observations;
+	// mostly obs for which verified emissions are missing
+	
+	bysort installation_id year (dup1): drop if dup1 == 1 & _n == 2
+	// drop one obs per duplicate if dup2==1
+	
+	duplicates tag installation_id year, generate(dup2)
+	*tab dup2 // around 0.6% of installation-year observations; they all start 2020 onwards
+	
+	bysort installation_id year (verified): drop if dup1 == 1 & _n == 2
 		
-	duplicates tag installation_id year, generate(duplicate) // around 1% of installation-year observations 
-	
 	preserve
 		
 		keep if duplicate == 1
