@@ -53,6 +53,14 @@ global proc_data "${dropbox}/carbon_policy_reallocation/data/processed"
 	sum mi_em // info on emissions is missing for ~60% of installation-year obs
 	
 	keep if !missing(verified)
+		
+	duplicates tag installation_id year, generate(duplicate)
+	
+	preserve
+		
+		keep if duplicate == 1
+		
+	restore
 	
 	drop mi_em
 	
