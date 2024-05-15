@@ -2,6 +2,7 @@
 Creates data set at the installation-year level with information on
 1. emissions
 2. BvD id
+3. acitivity and nace ids
 
 TO-DOs/Observations:
 
