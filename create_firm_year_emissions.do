@@ -2,8 +2,8 @@
 Creates data set at the firm-year level with information on
 1. emissions
 2. BvD id
-3. acitivity ids
-4. nace ids
+3. acitivity ids (from EUTL)
+4. nace ids (from EUTL)
 5. added value
 6. sales
 7. emissions over added value
@@ -13,6 +13,9 @@ TO-DO/Obs:
 1. some firms have 0 emissions for some years. This is probably because in those
 years they were not part of the EUETS, in which case their emissions should be missing,
 and not zero. Need to fix this.
+
+2. ORBIS also contains NACE codes but we dont have them in current download.
+get ORBIS' NACE codes for each firm and compare with out NACE codes.
 
 GJ
 *******************************************************************************/
@@ -90,6 +93,7 @@ global proc_data "${dropbox}/carbon_policy_reallocation/data/processed"
 	use "${raw_data}/ORBIS/orbis_eutl_firms.dta", clear
 	
 	rename CLOSDATE_year year
+	keep if year >= 2005
 	rename AV value_added
 	rename TURN sales
 	rename STAF labor
@@ -101,7 +105,7 @@ global proc_data "${dropbox}/carbon_policy_reallocation/data/processed"
 		// this already eliminates almost all of the duplicates
 		
 		// 2. if can't choose based on consolidated code, check if there's at leat one obs w/ non-missing 
-		// valuea_dded. if yes, keep the obs with non-missing valueadded
+		// value_added. if yes, keep the obs with non-missing value_added
 		
 		// 3. if can't choose based on missingness of VA, check missingness of sales
 		
@@ -212,6 +216,8 @@ global proc_data "${dropbox}/carbon_policy_reallocation/data/processed"
 	drop number dup
 	duplicates tag bvdid year, gen(dup)
 	
+	keep bvdid year value_added sales labor capital
+	
 	save "`orbis'"
 	
 *------------------------------
@@ -221,6 +227,8 @@ global proc_data "${dropbox}/carbon_policy_reallocation/data/processed"
 	use "${int_data}/firm_year_emissions.dta", clear
 	
 	merge 1:1 bvdid year using "`orbis'"
+	
+	save "${int_data}/firm_year.dta", replace
 
 	
 
