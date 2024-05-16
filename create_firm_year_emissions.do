@@ -94,52 +94,123 @@ global proc_data "${dropbox}/carbon_policy_reallocation/data/processed"
 	rename TURN sales
 	rename STAF labor
 	rename TFAS capital
-	rename CONSCODE cons
+	rename CONSCODE code
 	
 	// deal with duplicates across bvdid year:
 		// 1. if there are consolidated and unconsolidated obs keep the unconsolidated one
-		// this already eliminates XX% of the duplicates
+		// this already eliminates almost all of the duplicates
 		
-		// 2. if there's no distinction in consolidated code, check if there's at leat one obs w/ non-missing 
+		// 2. if can't choose based on consolidated code, check if there's at leat one obs w/ non-missing 
 		// valuea_dded. if yes, keep the obs with non-missing valueadded
 		
-		// 3. if there's no distinction in consolidated code and in missingness of VA, check missingness of sales
+		// 3. if can't choose based on missingness of VA, check missingness of sales
 		
 		// 4. do the same for labor
 		
 		// 5. do the same for capital
 		
-		// 6. 
+		// 6. for the remaining duplicates, choose the obs with highest sales
+		
+		// 7. if sales same for all obs within firm-year, choose obs with max value_added
+		
+		// 8. then obs with max labor
+		
+		// 9. then obs with max capital
+		
+		// 10. by construction, remaining duplicates are dup in all relevant variables so choose one at random
 		
 	duplicates tag bvdid year, gen(dup)
 	
 	* check consolidation codes
-	bysort bvdid year (cons): gen last_code = cons[_N] if dup > 0
-	bysort bvdid year (cons): gen first_code = cons[1] if dup > 0
-	bysort bvdid year (cons): gen code_consistent = last_code == first_code if dup > 0
-	
-	* check missigness of VA
-	bysort bvdid year (value_added): gen mi_last_va = missing(value_added[_N]) if dup > 0 & code_consistent == 1
-	bysort bvdid year (value_added): gen mi_first_va = missing(value_added[1]) if dup > 0 & code_consistent == 1
-	bysort bvdid year (value_added): gen mi_va_consistent = mi_last_va == mi_first_va if dup > 0 & code_consistent == 1
-	
-	* check missigness of sales
-	bysort bvdid year (sales): gen mi_last_sales = missing(sales[_N]) if dup > 0 & code_consistent == 1
-	bysort bvdid year (sales): gen mi_first_sales = missing(sales[1]) if dup > 0 & code_consistent == 1
-	bysort bvdid year (sales): gen mi_sales_consistent = mi_last_sales == mi_first_sales if dup > 0 & code_consistent == 1
+	bysort bvdid year (code): gen last_code = code[_N] if dup > 0
+	bysort bvdid year (code): gen first_code = code[1] if dup > 0
+	bysort bvdid year (code): gen code_consistent = last_code == first_code if dup > 0
 	
 	// 1. if there are both, keep the unconsolidated
-	drop if dup > 0 & last_code == "U1" & code != "U1" | dup > 0 & last_code == "U2" & code != "U2" 
+	drop if (dup > 0 & last_code == "U1" & code != "U1") | (dup > 0 & last_code == "U2" & code != "U2")
+	
+	drop last_code first_code code_consistent dup
+	
+	duplicates tag bvdid year, gen(dup)
+
+	* check missigness of VA
+	bysort bvdid year (value_added): gen mi_last_va = missing(value_added[_N]) if dup > 0
+	bysort bvdid year (value_added): gen mi_first_va = missing(value_added[1]) if dup > 0
+	bysort bvdid year (value_added): gen mi_va_consistent = mi_last_va == mi_first_va if dup > 0
 	
 	// 2. if there's no distinction in consolidated code, keep the obs with non-missing value_added
-	drop if dup > 0 & code_consistent == 1 & mi_va_consistent == 0 & missing(value_added)
+	drop if dup > 0 & mi_va_consistent == 0 & missing(value_added)
+	
+	drop mi_last_va mi_first_va mi_va_consistent dup
+	duplicates tag bvdid year, gen(dup)
+	
+	* check missigness of sales
+	bysort bvdid year (sales): gen mi_last_sales = missing(sales[_N]) if dup > 0
+	bysort bvdid year (sales): gen mi_first_sales = missing(sales[1]) if dup > 0
+	bysort bvdid year (sales): gen mi_sales_consistent = mi_last_sales == mi_first_sales if dup > 0
 	
 	// 3. if there's no distinction in consolidated code or VA missigness, keep the obs with non-missing sales
-	drop if dup > 0 & code_consistent == 1 & mi_sales_consistent == 0 & missing(sales) 
+	drop if dup > 0 & mi_sales_consistent == 0 & missing(sales) 
 	
+	drop mi_last_sales mi_first_sales mi_sales_consistent dup
+	duplicates tag bvdid year, gen(dup)
 	
+	* check missigness of labor
+	bysort bvdid year (labor): gen mi_last_labor = missing(labor[_N]) if dup > 0
+	bysort bvdid year (labor): gen mi_first_labor = missing(labor[1]) if dup > 0
+	bysort bvdid year (labor): gen mi_labor_consistent = mi_last_labor == mi_first_labor if dup > 0
 	
-	g mi_va = (dup > 0 & missing(valueadded))
+	// 4. move on to labor
+	drop if dup > 0 & mi_labor_consistent == 0 & missing(labor) 
+	
+	drop mi_last_labor mi_first_labor mi_labor_consistent dup
+	duplicates tag bvdid year, gen(dup)
+	
+	* check missigness of capital
+	bysort bvdid year (capital): gen mi_last_capital = missing(capital[_N]) if dup > 0
+	bysort bvdid year (capital): gen mi_first_capital = missing(capital[1]) if dup > 0
+	bysort bvdid year (capital): gen mi_capital_consistent = mi_last_capital == mi_first_capital if dup > 0
+	
+	// 5. move on to capital
+	drop if dup > 0 & mi_capital_consistent == 0 & missing(capital) 
+	
+	drop mi_last_capital mi_first_capital mi_capital_consistent dup
+	duplicates tag bvdid year, gen(dup)
+	
+	// 6. select based on max sales
+	bysort bvdid year (sales): gen max_sales = sales[_N]
+	drop if dup > 0 & sales != max_sales
+	
+	drop max_sales dup
+	duplicates tag bvdid year, gen(dup)
+	
+	// 7. select based on max value added
+	bysort bvdid year (value_added): gen max_va = value_added[_N]
+	drop if dup > 0 & value_added != max_va
+	
+	drop max_va dup
+	duplicates tag bvdid year, gen(dup)
+	
+	// 8. select based on max labor
+	bysort bvdid year (labor): gen max_labor = labor[_N]
+	drop if dup > 0 & labor != max_labor
+	
+	drop max_labor dup
+	duplicates tag bvdid year, gen(dup)
+	
+	// 9. select based on max capital
+	bysort bvdid year (capital): gen max_k = capital[_N]
+	drop if dup > 0 & capital != max_k
+	
+	drop max_k dup
+	duplicates tag bvdid year, gen(dup)
+	
+	// 10. choose a random one to drop
+	bysort bvdid year: gen number = _n
+	drop if dup > 0 & number != 1
+	
+	drop number dup
+	duplicates tag bvdid year, gen(dup)
 	
 	save "`orbis'"
 	
