@@ -15,7 +15,13 @@ years they were not part of the EUETS, in which case their emissions should be m
 and not zero. Need to fix this.
 
 2. ORBIS also contains NACE codes but we dont have them in current download.
-get ORBIS' NACE codes for each firm and compare with out NACE codes.
+get ORBIS' NACE codes for each firm and compare with our NACE codes.
+
+3. (THIS IS IMPORTANT) check whether obs for which _merge == 2 in final merge
+are ORBIS firms for which corresponding account in account.csv are not OHA
+(and therefore are not account that belong to firms actually treated by carbon policy)
+
+4. (THIS IS IMPORTANT) check why _merge == 1
 
 GJ
 *******************************************************************************/
@@ -227,6 +233,19 @@ global proc_data "${dropbox}/carbon_policy_reallocation/data/processed"
 	use "${int_data}/firm_year_emissions.dta", clear
 	
 	merge 1:1 bvdid year using "`orbis'"
+	
+	// why _merge == 2?
+	// ORBIS data is subset of ORBIS firms that are present in EUTL account.csv
+	// per code "pull_bvd_id_numbers.do"
+	// there are bvdid in account.csv in EUTL that are NOT part of the EUETS
+	// e.g. trading accounts
+	// if there are trading accounts that are owned by ORBIS firms, then
+	// we will select them but they do not actually correspond to EUETS firms
+	
+	// why _merge == 1? 
+	// firm-year in EUETS that are missing in ORBIS
+	// the firm is present in ORBIS for some year, otherwise it wouldnt have BvD id
+	// but for some particular year, the info is missing
 	
 	save "${int_data}/firm_year.dta", replace
 
