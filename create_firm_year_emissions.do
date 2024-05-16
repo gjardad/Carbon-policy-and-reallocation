@@ -2,7 +2,12 @@
 Creates data set at the firm-year level with information on
 1. emissions
 2. BvD id
-3. acitivity and nace ids
+3. acitivity ids
+4. nace ids
+5. added value
+6. sales
+7. emissions over added value
+8. emissions over sales
 
 TO-DO/Obs:
 1. some firms have 0 emissions for some years. This is probably because in those
@@ -75,4 +80,102 @@ global proc_data "${dropbox}/carbon_policy_reallocation/data/processed"
 	drop if missing(bvdid)
 	
 	save "${int_data}/firm_year_emissions.dta", replace
+	
+*------------------------------
+* Read in firm-year-level data from ORBIS
+*------------------------------
+
+	tempfile orbis
+	
+	use "${raw_data}/ORBIS/orbis_eutl_firms.dta", clear
+	
+	rename CLOSDATE_year year
+	rename AV value_added
+	rename TURN sales
+	rename STAF labor
+	rename TFAS capital
+	rename CONSCODE cons
+	
+	// deal with duplicates across bvdid year:
+		// 1. if there are consolidated and unconsolidated obs keep the unconsolidated one
+		// this already eliminates XX% of the duplicates
+		
+		// 2. if there's no distinction in consolidated code, check if there's at leat one obs w/ non-missing 
+		// valuea_dded. if yes, keep the obs with non-missing valueadded
+		
+		// 3. if there's no distinction in consolidated code and in missingness of VA, check missingness of sales
+		
+		// 4. do the same for labor
+		
+		// 5. do the same for capital
+		
+		// 6. 
+		
+	duplicates tag bvdid year, gen(dup)
+	
+	* check consolidation codes
+	bysort bvdid year (cons): gen last_code = cons[_N] if dup > 0
+	bysort bvdid year (cons): gen first_code = cons[1] if dup > 0
+	bysort bvdid year (cons): gen code_consistent = last_code == first_code if dup > 0
+	
+	* check missigness of VA
+	bysort bvdid year (value_added): gen mi_last_va = missing(value_added[_N]) if dup > 0 & code_consistent == 1
+	bysort bvdid year (value_added): gen mi_first_va = missing(value_added[1]) if dup > 0 & code_consistent == 1
+	bysort bvdid year (value_added): gen mi_va_consistent = mi_last_va == mi_first_va if dup > 0 & code_consistent == 1
+	
+	* check missigness of sales
+	bysort bvdid year (sales): gen mi_last_sales = missing(sales[_N]) if dup > 0 & code_consistent == 1
+	bysort bvdid year (sales): gen mi_first_sales = missing(sales[1]) if dup > 0 & code_consistent == 1
+	bysort bvdid year (sales): gen mi_sales_consistent = mi_last_sales == mi_first_sales if dup > 0 & code_consistent == 1
+	
+	// 1. if there are both, keep the unconsolidated
+	drop if dup > 0 & last_code == "U1" & code != "U1" | dup > 0 & last_code == "U2" & code != "U2" 
+	
+	// 2. if there's no distinction in consolidated code, keep the obs with non-missing value_added
+	drop if dup > 0 & code_consistent == 1 & mi_va_consistent == 0 & missing(value_added)
+	
+	// 3. if there's no distinction in consolidated code or VA missigness, keep the obs with non-missing sales
+	drop if dup > 0 & code_consistent == 1 & mi_sales_consistent == 0 & missing(sales) 
+	
+	
+	
+	g mi_va = (dup > 0 & missing(valueadded))
+	
+	save "`orbis'"
+	
+*------------------------------
+* Merge firm-level emissions with firm-level ORBIS
+*------------------------------
+
+	use "${int_data}/firm_year_emissions.dta", clear
+	
+	merge 1:1 bvdid year using "`orbis'"
+
+	
+
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+
 	
