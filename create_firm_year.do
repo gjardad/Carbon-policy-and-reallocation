@@ -249,6 +249,8 @@ global proc_data "${dropbox}/carbon_policy_reallocation/data/processed"
 	
 	rename firm_emissions co2
 	rename value_added va
+	rename activity_id activity
+	rename nace_id nace
 	
 	save "${proc_data}/firm_year.dta", replace
 	
