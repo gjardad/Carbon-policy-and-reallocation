@@ -13,12 +13,20 @@ TO-DO/Obs:
 years they were not part of the EUETS, in which case their emissions should be missing,
 and not zero. Need to fix this.
 
-2. ORBIS also contains NACE codes but we dont have them in current download.
-get ORBIS' NACE codes for each firm and compare with our NACE codes.
+2. we define firm-level emissions as the sum of emissions for all installations owned by the firm
+this might cause sharp discontinuities in firm-level emissions due to installations entering and exiting
+the EUETS (e.g. combustion installations are only included if yse > 20MWH energy).
+this might lead us to conculde that in any given year,
+any given firm is abating but its rather because the number of installation it owns covered by the EUETS
+dropped discretely
+
+not sure how to deal with this right now, but something to keep in mind
 
 3. (THIS IS IMPORTANT) check whether obs for which _merge == 2 in final merge
 are ORBIS firms for which corresponding account in account.csv are not OHA
 (and therefore are not account that belong to firms actually treated by carbon policy)
+
+As of now we are dropping if _merge == 2
 
 4. (THIS IS IMPORTANT) check why _merge == 1
 
