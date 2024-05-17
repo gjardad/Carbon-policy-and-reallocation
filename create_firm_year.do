@@ -261,7 +261,56 @@ global proc_data "${dropbox}/carbon_policy_reallocation/data/processed"
 	rename activity_id activity
 	rename nace_id nace
 	
-	save "${proc_data}/firm_year.dta", replace
+	drop _merge
+	
+	save "${int_data}/firm_year.dta", replace
+	
+*------------------------------
+* Read in firm-level 4-digit NACE codes from ORBIS
+*------------------------------
+
+	tempfile nace_orbis
+	
+	import delimited "${raw_data}/ORBIS/orbis_nace", clear
+	
+	rename nacepcod2 nace
+	
+	keep if !missing(nace)
+	
+	* Step 1: Sort the data by bvdid
+	bysort bvdid: gen random_order = runiform()
+
+	* Step 2: Sort within each bvdid group by the random order
+	bysort bvdid (random_order): gen random_nace = nace if _n == 1
+
+	* Step 3: Create the final variable with the random nace value for each bvdid group
+	bysort bvdid: egen random_nace_final = min(random_nace)
+	
+	*bysort bvdid: g stay = (nace == random_nace_final)
+
+	rename random_nace_final nace_orbis
+	
+	keep bvdid nace_orbis
+	duplicates drop
+	
+	save "`nace_orbis'"
+	
+*------------------------------
+* Merge with NACE codes from ORBIS
+*------------------------------
+	
+	use "${int_data}/firm_year.dta", clear
+	
+	merge m:1 bvdid using "`nace_orbis'"
+	
+	drop if _merge == 2
+	
+	drop _merge
+	
+	save "${int_data}/firm_year.dta", replace	
+	
+	
+	
 	
 
 	
