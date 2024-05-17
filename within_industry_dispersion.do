@@ -55,12 +55,12 @@ global proc_data "${dropbox}/carbon_policy_reallocation/data/processed"
 *------------------------------
 
 	// generate productivity measures
-	gen sales_co2 = sales/co2
-	gen va_co2 = va/co2
-	gen sales_labor = sales/labor
-	gen va_labor = va/labor
-	gen sales_capital = sales/capital
-	gen va_capital = va/capital
+	gen sales_co2 = log(sales/co2)
+	gen va_co2 = log(va/co2)
+	gen sales_labor = log(sales/labor)
+	gen va_labor = log(va/labor)
+	gen sales_capital = log(sales/capital)
+	gen va_capital = log(va/capital)
 	
 	// within-acitivity heterogeneity in productivity measures
 	foreach ind in activity nace{
@@ -75,16 +75,23 @@ global proc_data "${dropbox}/carbon_policy_reallocation/data/processed"
 		}
 		
 		* identifiers for firm-year obs which are the only obs in a given industry-year
-		bysort year `ind': egen count_obs = count(`ind')
-		gen solo_`ind' = count_obs == 1
-		drop count_obs
+		bysort year `ind': egen count_`ind' = count(`ind')
+		gen solo_`ind' = count_`ind' == 1
 		
 		// within-activity dispersion
 		foreach var in sales_co2 va_co2 sales_labor va_labor sales_capital va_capital {
-			bysort year `ind': egen std_`ind'_`var' = sd(`var') if solo == 0
-			bysort year `ind': egen p9010_ratio_`ind'_`var' = p90_`ind'_`var'/p10_`ind'_`var' if solo == 0
-			bysort year `ind': egen p8020_ratio_`ind'_`var' = p80_`ind'_`var'/p20_`ind'_`var' if solo == 0
+			bysort year `ind': egen std_`ind'_`var' = sd(`var') if solo_`ind' == 0
+			bysort year `ind': gen p9010_`ind'_`var' = p90_`ind'_`var' - p10_`ind'_`var' if solo_`ind' == 0
+			bysort year `ind': gen p8020_`ind'_`var' = p80_`ind'_`var' - p20_`ind'_`var' if solo_`ind' == 0
+		}
+		
 	}
+	
+	collapse (first) p9010_activity_sales_co2 p9010_activity_sales_labor p9010_activity_sales_capital, by(activity year) 
+	
+	save "${proc_data}/prod_dispersion.dta", replace
+	
+	
 
 	
 
