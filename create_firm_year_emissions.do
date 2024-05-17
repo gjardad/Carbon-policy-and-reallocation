@@ -242,12 +242,42 @@ global proc_data "${dropbox}/carbon_policy_reallocation/data/processed"
 	// if there are trading accounts that are owned by ORBIS firms, then
 	// we will select them but they do not actually correspond to EUETS firms
 	
+	drop if _merge == 2
+	
 	// why _merge == 1? 
 	// firm-year in EUETS that are missing in ORBIS
 	// the firm is present in ORBIS for some year, otherwise it wouldnt have BvD id
 	// but for some particular year, the info is missing
 	
 	save "${int_data}/firm_year.dta", replace
+	
+	rename firm_emissions co2
+	rename value_added va
+	
+	// generate productivity measures
+	gen sales_co2 = sales/co2
+	gen va_co2 = va/co2
+	gen sales_labor = sales/labor
+	gen va_labor = va/labor
+	gen sales_capital = sales/capital
+	gen va_capital = va/capital
+	
+	// within-acitivity heterogeneity in productivity measures
+	foreach var in sales_co2 va_co2 sales_labor va_labor sales_capital va_capital {
+		bysort year activity_id: egen mean_`var' = mean(`var')
+		bysort year activity_id: egen median_`var' = median(`var')
+		bysort year activity_id: egen std_`var' = sd(`var')
+		bysort year activity_id: egen p10_`var' = pctile(`var'), p(10)
+		bysort year activity_id: egen p20_`var' = pctile(`var'), p(20)
+		bysort year activity_id: egen p80_`var' = pctile(`var'), p(80)
+		bysort year activity_id: egen p90_`var' = pctile(`var'), p(90)
+		
+		bysort year activity_id: egen ratio_9010_`var' = p90_`var'/p10_`var'
+	}	
+	
+
+
+
 
 	
 
