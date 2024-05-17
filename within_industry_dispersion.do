@@ -79,7 +79,7 @@ global proc_data "${dropbox}/carbon_policy_reallocation/data/processed"
 			
 			* some industries have only firm-year for which prod measure is non-missing,
 			* in which case dispersion will be 0 by construction
-			bysort year `ind' (mi): egen nonmissing = count(`var')
+			bysort year `ind': egen nonmissing = count(`var')
 		
 			// within-activity dispersion
 			bysort year `ind': egen std_`ind'_`var' = sd(`var') if nonmissing > 1
