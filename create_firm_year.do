@@ -4,6 +4,7 @@ Creates data set at the firm-year level with information on
 2. BvD id
 3. acitivity ids (from EUTL)
 4. nace ids (from EUTL)
+5. nace codes (from ORBIS)
 5. added value
 6. sales
 
