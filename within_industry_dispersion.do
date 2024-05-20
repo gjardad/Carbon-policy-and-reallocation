@@ -99,7 +99,7 @@ global proc_data "${dropbox}/carbon_policy_reallocation/data/processed"
 	
 		collapse (first) p9010_activity_sales_co2 p9010_activity_sales_labor p9010_activity_sales_capital, by(activity year) 
 		
-		save "${proc_data}/prod_dispersion_act.dta", replace
+		save "${proc_data}/prod_dispersion_activity.dta", replace
 		
 	restore
 	
