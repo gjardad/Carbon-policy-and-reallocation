@@ -29,4 +29,8 @@ global proc_data "${dropbox}/carbon_policy_reallocation/data/processed"
 * Read in firm-year-level data
 *------------------------------
 
-	use "${int_data}/firm_year.dta", clear
+	import delimited "${raw_data}/EUTL/installation.csv", clear
+	
+	keep activity_id nace*
+	
+	duplicates drop
