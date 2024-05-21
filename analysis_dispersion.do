@@ -46,7 +46,7 @@ global proc_data "${dropbox}/carbon_policy_reallocation/data/processed"
 	}
 	
 *------------------------------
-* Create graphs
+* Create graph for average dispersion
 *------------------------------
 
 	// Graph for average dispersion across all industries 
@@ -66,7 +66,54 @@ global proc_data "${dropbox}/carbon_policy_reallocation/data/processed"
 
 	restore
 	
+*------------------------------
+* Create graphs for 5 most polluting sectors
+*------------------------------
+
+	preserve
+		// identify sectors within "combustion fuels" which are heavily pollutants
+		use "${int_data}/firm_year.dta", clear
+		
+		gen str nace_str = string(nace, "%9.2f")
+		gen dot_pos = strpos(nace_str, ".")
+		gen str nace_2digit = substr(nace_str, 1, dot_pos - 1) // extract digits before dot
+		
+		drop if missing(nace)
+		
+		keep nace_2digit year co2
+		
+		bysort nace_2digit year: egen nace_co2 = total(co2)
+		
+		drop co2
+		
+		duplicates drop
+		
+		// the NACE sectors that represent the largest share of total emissions
+		// within activity 1 are 35, 24, and 20
+		
+		// the NACE sectors that represent the largest share of total emissions
+		// unconditionally are 35, 24, 23, 20, 19
+	restore
+
 	// Separate graphs for the 5-most polluting sectors
+	preserve
+		
+		keep if year <= 2020 & inlist(nace, "35", "20", "24", "23", "19")
+		
+		local nacelist "35 20 24 23 19"
+		foreach n of local nacelist {
+			twoway (line avg_sales_co2 year if nace == "`n'", lcolor(black) lpattern(dash_dot)) ///
+				   (line avg_sales_labor year if nace == "`n'", lcolor(black) lpattern(solid)) ///
+		           (line avg_sales_capital year if nace == "`n'", lcolor(gs6) lpattern(solid)), ///
+				   title("Dispersion over time for NACE = "`n'"") ///
+				   xlabel(2005(5)2020) ///
+				   ylabel(0(1)5) ///
+				   legend(label(1 "CO2") label(2 "Labor") label(3 "Capital"))
+		}
+
+	restore
+	
+	
 	
 	
 
