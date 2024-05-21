@@ -1,6 +1,5 @@
 /*******************************************************************************
-Creates activity-level data set with corresponding NACE code from EUETS.INFO
-
+Creates firm-level data with NACE codes from both EUETS.INFO and ORBIS
 TO-DO/Obs:
 1. 
 

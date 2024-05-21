@@ -68,7 +68,7 @@ global proc_data "${dropbox}/carbon_policy_reallocation/data/processed"
 	gen str nace = substr(nace_str, 1, dot_pos - 1) // extract digits before dot
 	
 	replace nace = substr(string(nace_orbis), 1, 2) if missing(nace)
-	replace nace = . if nace == "."
+	replace nace = "" if nace == "."
 	
 	// within-industry heterogeneity in productivity measures
 	foreach ind in activity nace{
@@ -84,17 +84,17 @@ global proc_data "${dropbox}/carbon_policy_reallocation/data/processed"
 			
 			* some industries have only firm-year for which prod measure is non-missing,
 			* in which case dispersion will be 0 by construction
-			bysort year `ind': egen nonmissing = count(`var')
+			bysort year `ind': egen valid_`ind'_`var' = count(`var')
 		
 			// within-activity dispersion
-			bysort year `ind': egen std_`ind'_`var' = sd(`var') if nonmissing > 1
-			bysort year `ind': gen p9010_`ind'_`var' = p90_`ind'_`var' - p10_`ind'_`var' if nonmissing > 1
-			bysort year `ind': gen p8020_`ind'_`var' = p80_`ind'_`var' - p20_`ind'_`var' if nonmissing > 1
-			
-			drop nonmissing
+			bysort year `ind': egen std_`ind'_`var' = sd(`var')
+			bysort year `ind': gen p9010_`ind'_`var' = p90_`ind'_`var' - p10_`ind'_`var' 
+			bysort year `ind': gen p8020_`ind'_`var' = p80_`ind'_`var' - p20_`ind'_`var'
+
 		}
 		
 	}
+	
 	
 
 *------------------------------
