@@ -94,8 +94,6 @@ global proc_data "${dropbox}/carbon_policy_reallocation/data/processed"
 		}
 		
 	}
-	
-	
 
 *------------------------------
 * Create data sets at the activity and NACE code levels
@@ -110,8 +108,13 @@ global proc_data "${dropbox}/carbon_policy_reallocation/data/processed"
 	
 	preserve
 		
-		collapse (first) p9010_nace_sales_co2 p9010_nace_sales_labor p9010_nace_sales_capital, by(nace year) 
-		
+		collapse (first) p9010_nace_sales_co2 p9010_nace_sales_labor p9010_nace_sales_capital ///
+						 valid_nace_sales_co2 valid_nace_sales_labor valid_nace_sales_capital ///
+						 p9010_nace_va_co2 p9010_nace_va_labor p9010_nace_va_capital ///
+						 valid_nace_va_co2 valid_nace_va_labor valid_nace_va_capital, by(nace year)
+						 
+		drop if missing(nace)
+
 		save "${proc_data}/prod_dispersion_nace.dta", replace
 		
 	restore
