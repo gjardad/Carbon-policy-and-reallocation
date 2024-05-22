@@ -88,7 +88,9 @@ global proc_data "${dropbox}/carbon_policy_reallocation/data/processed"
 	*bysort bvdid (bvd_nace): g nace_consistent = bvd_nace[1] == bvd_nace[_N] if !missing(bvdid)
 	// consistent!
 	
-	collapse (first) firm_emissions bvd_nace bvd_activity, by(bvdid year)
+	bysort bvdid year: egen n_installations = count(installation_id)
+	
+	collapse (first) firm_emissions bvd_nace bvd_activity n_installations, by(bvdid year)
 	
 	rename bvd_nace nace_id
 	rename bvd_activity activity_id
