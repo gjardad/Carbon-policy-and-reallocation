@@ -24,6 +24,7 @@ if "`c(username)'"=="jota_"{
 global raw_data "${dropbox}/carbon_policy_reallocation/data/raw"
 global int_data "${dropbox}/carbon_policy_reallocation/data/intermediate"
 global proc_data "${dropbox}/carbon_policy_reallocation/data/processed"
+global output "${dropbox}/carbon_policy_reallocation/output"
 
 *------------------------------
 * Read in nace-year-level data
@@ -59,10 +60,12 @@ global proc_data "${dropbox}/carbon_policy_reallocation/data/processed"
 	twoway (line avg_sales_co2 year, lcolor(black) lpattern(dash_dot)) ///
 		   (line avg_sales_labor year, lcolor(black) lpattern(solid)) ///
 		   (line avg_sales_capital year, lcolor(gs6) lpattern(solid)), ///
-		   title("Average dispersion over time") ///
+		   title("") ///
 		   xlabel(2005(5)2020) ///
 		   ylabel(0(1)5) ///
 		   legend(label(1 "CO2") label(2 "Labor") label(3 "Capital"))
+		   
+	graph export "${output}/avg_dispersion.png", as(png) replace
 
 	restore
 	
@@ -105,10 +108,12 @@ global proc_data "${dropbox}/carbon_policy_reallocation/data/processed"
 			twoway (line avg_sales_co2 year if nace == "`n'", lcolor(black) lpattern(dash_dot)) ///
 				   (line avg_sales_labor year if nace == "`n'", lcolor(black) lpattern(solid)) ///
 		           (line avg_sales_capital year if nace == "`n'", lcolor(gs6) lpattern(solid)), ///
-				   title("Dispersion over time for NACE = "`n'"") ///
+				   title("") ///
 				   xlabel(2005(5)2020) ///
 				   ylabel(0(1)5) ///
 				   legend(label(1 "CO2") label(2 "Labor") label(3 "Capital"))
+				   
+			graph export "${output}/dispersion_sector_`n'.png", as(png) replace
 		}
 
 	restore
