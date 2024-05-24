@@ -84,7 +84,7 @@ global proc_data "${dropbox}/carbon_policy_reallocation/data/processed"
 			
 			* some industries have only firm-year for which prod measure is non-missing,
 			* in which case dispersion will be 0 by construction
-			bysort year `ind': egen valid_`ind'_`var' = count(`var')
+			bysort year `ind': egen valid_`var'_in_`ind' = count(`var')
 		
 			// within-activity dispersion
 			bysort year `ind': egen std_`ind'_`var' = sd(`var')
@@ -92,6 +92,8 @@ global proc_data "${dropbox}/carbon_policy_reallocation/data/processed"
 			bysort year `ind': gen p8020_`ind'_`var' = p80_`ind'_`var' - p20_`ind'_`var'
 
 		}
+		
+		bysort year `ind': egen number_firms_in_`ind' = count(bvdid)
 		
 	}
 
@@ -109,9 +111,9 @@ global proc_data "${dropbox}/carbon_policy_reallocation/data/processed"
 	preserve
 		
 		collapse (first) p9010_nace_sales_co2 p9010_nace_sales_labor p9010_nace_sales_capital ///
-						 valid_nace_sales_co2 valid_nace_sales_labor valid_nace_sales_capital ///
+						 valid_sales_co2_in_nace valid_sales_labor_in_nace valid_sales_capital_in_nace ///
 						 p9010_nace_va_co2 p9010_nace_va_labor p9010_nace_va_capital ///
-						 valid_nace_va_co2 valid_nace_va_labor valid_nace_va_capital, by(nace year)
+						 valid_va_co2_in_nace valid_va_labor_in_nace valid_va_capital_in_nace, by(nace year)
 						 
 		drop if missing(nace)
 
