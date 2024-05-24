@@ -32,6 +32,9 @@ global output "${dropbox}/carbon_policy_reallocation/output"
 
 	use "${proc_data}/prod_dispersion_nace.dta", clear
 	
+	* set style of graphs
+	set scheme modern, perm
+	
 *------------------------------
 * Create mean and std across sectors by year
 *------------------------------
@@ -61,6 +64,8 @@ global output "${dropbox}/carbon_policy_reallocation/output"
 		   (line avg_sales_labor year, lcolor(black) lpattern(solid)) ///
 		   (line avg_sales_capital year, lcolor(gs6) lpattern(solid)), ///
 		   title("") ///
+		   xtitle("") ///
+		   ytitle("Difference in log points 90th - 10th percentile") ///
 		   xlabel(2005(5)2020) ///
 		   ylabel(0(1)5) ///
 		   legend(label(1 "CO2") label(2 "Labor") label(3 "Capital"))
@@ -103,15 +108,27 @@ global output "${dropbox}/carbon_policy_reallocation/output"
 		
 		keep if year <= 2020 & inlist(nace, "35", "20", "24", "23", "19")
 		
+		egen avg_number_valid_firms = ///
+		     rowmean(valid_nace_sales_co2 valid_nace_sales_labor valid_nace_sales_capital)
+		replace avg_number_valid_firms = floor(avg_number_valid_firms)
+		
 		local nacelist "35 20 24 23 19"
-		foreach n of local nacelist {
-			twoway (line avg_sales_co2 year if nace == "`n'", lcolor(black) lpattern(dash_dot)) ///
-				   (line avg_sales_labor year if nace == "`n'", lcolor(black) lpattern(solid)) ///
-		           (line avg_sales_capital year if nace == "`n'", lcolor(gs6) lpattern(solid)), ///
-				   title("") ///
-				   xlabel(2005(5)2020) ///
-				   ylabel(0(1)5) ///
-				   legend(label(1 "CO2") label(2 "Labor") label(3 "Capital"))
+		foreach n of local nacelist {				   
+			twoway (line p9010_nace_sales_co2 year if nace == `"`n'"', ///
+						lcolor(black) lpattern(dash_dot) yaxis(1)) ///
+					   (line p9010_nace_sales_labor year if nace == `"`n'"', ///
+						lcolor(black) lpattern(solid) yaxis(1)) ///
+					   (line p9010_nace_sales_capital year if nace == `"`n'"', ///
+						lcolor(gs6) lpattern(solid) yaxis(1)) ///
+					   (line avg_number_valid_firms year if nace == `"`n'"', ///
+						lcolor(red) lpattern(solid) yaxis(2)), ///
+					   title("") ///
+					   xtitle("") ///
+					   ytitle("Difference in log points 90th - 10th percentile", axis(1)) ///
+					   ytitle("Number of firms", axis(2)) ///
+					   xlabel(2005(5)2020) ///
+					   ylabel(0(1)5) ///
+					   legend(label(1 "CO2") label(2 "Labor") label(3 "Capital") label(4 "# firms"))
 				   
 			graph export "${output}/dispersion_sector_`n'.png", as(png) replace
 		}
