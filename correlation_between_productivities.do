@@ -56,7 +56,12 @@ global proc_data "${dropbox}/carbon_policy_reallocation/data/processed"
 *------------------------------
 
 reg sales_co2 nace_4digit
-predict resid, residuals
-scatter sales_labor resid, xline(0)
+predict resid_co2, residuals
+reg sales_labor nace_4digit
+predict resid_labor, residuals
+reg sales_capital nace_4digit
+predict resid_capital, residuals
+twoway (scatter resid_co2 resid_labor) (lfit resid_co2 resid_labor)
+twoway (scatter resid_co2 resid_capital) (lfit resid_co2 resid_capital)
 	
 	
