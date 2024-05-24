@@ -81,10 +81,8 @@ global proc_data "${dropbox}/carbon_policy_reallocation/data/processed"
 
 		}
 		
-		bysort year `ind': egen number_firms_in_`ind' = count(bvdid)
-		
 	}
-
+	
 *------------------------------
 * Create dispersion data sets at the activity and NACE code levels
 *------------------------------
@@ -108,6 +106,20 @@ global proc_data "${dropbox}/carbon_policy_reallocation/data/processed"
 		save "${proc_data}/prod_dispersion_nace.dta", replace
 		
 	restore
+	
+*------------------------------
+* Create data set at industry-year level with number of firms and installations
+*------------------------------
+
+	foreach ind in activity nace{
+		bysort year `ind': egen number_firms_in_`ind' = count(bvdid)
+	}
+	
+	
+	
+	
+
+
 	
 	
 
