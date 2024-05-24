@@ -156,6 +156,8 @@ global proc_data "${dropbox}/carbon_policy_reallocation/data/processed"
 	
 	merge 1:1 nace year using "`installations'"
 	
+	drop *activity*
+	
 	
 		
 		
