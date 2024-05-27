@@ -40,8 +40,6 @@ global proc_data "${dropbox}/carbon_policy_reallocation/data/processed"
 
 	import delimited "${raw_data}/EUTL/installation.csv", clear
 	
-	*keep if activity_id != 10
-	
 	rename id installation_id
 	
 	keep installation_id nace_id activity_id
