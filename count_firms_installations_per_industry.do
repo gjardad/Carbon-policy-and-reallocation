@@ -43,7 +43,7 @@ global proc_data "${dropbox}/carbon_policy_reallocation/data/processed"
 	replace nace = "" if nace == "."	
 	
 	bysort year nace: egen number_firms = count(bvdid)
-	bysort year nace: egen number_firms_positive_emissions = count(bvdid) if co2 > 0
+	bysort year nace: egen number_firms_positive_emissions = count(bvdid) if co2 > 0 & !missing(co2)
 	bysort year nace (number_firms_positive_emissions): replace number_firms_positive_emissions = number_firms_positive_emissions[1] if missing(number_firms_positive_emissions)
 	
 	collapse (first) number_firms*, by(nace year)
@@ -64,7 +64,8 @@ global proc_data "${dropbox}/carbon_policy_reallocation/data/processed"
 		rename activity_id activity
 		
 		bysort year nace: egen number_installations = count(installation_id)
-		bysort year nace: egen number_inst_positive_emissions = count(installation_id) if verified > 0
+		bysort year nace: egen number_inst_positive_emissions = count(installation_id) ///
+		if verified > 0 & !missing(verified)
 		bysort year nace (number_inst_positive_emissions): replace number_inst_positive_emissions =number_inst_positive_emissions[1] if missing(number_inst_positive_emissions)
 		
 		collapse (first) number_inst*, by(nace year)
@@ -99,7 +100,7 @@ global proc_data "${dropbox}/carbon_policy_reallocation/data/processed"
 	replace activity = 36 if activity == 9
 	
 	bysort year activity: egen number_firms = count(bvdid)
-	bysort year activity: egen number_firms_positive_emissions = count(bvdid) if co2 > 0
+	bysort year activity: egen number_firms_positive_emissions = count(bvdid) if co2 > 0 & !missing(co2)
 	bysort year activity (number_firms_positive_emissions): replace number_firms_positive_emissions = number_firms_positive_emissions[1] if missing(number_firms_positive_emissions)
 	
 	collapse (first) number_firms*, by(activity year)
@@ -126,8 +127,16 @@ global proc_data "${dropbox}/carbon_policy_reallocation/data/processed"
 		replace activity = 36 if activity == 9
 		
 		bysort year activity: egen number_installations = count(installation_id)
-		bysort year activity: egen number_inst_positive_emissions = count(installation_id) if verified > 0
+		bysort year activity: egen number_inst_positive_emissions = count(installation_id) if ///
+		verified > 0 & !missing(verified)
 		bysort year activity (number_inst_positive_emissions): replace number_inst_positive_emissions =number_inst_positive_emissions[1] if missing(number_inst_positive_emissions)
+		
+		* count installations that have positive emissions for at least one year 2005-2012
+		* to compare with numbers provided by Verde et al (2019)
+		* "Installation entries and exits in the EU ETS" (${dropbox}/carbon_policy_reallocation/literature)
+		g positive_emissions_year = (verified > 0 & !missing(verified) & year > 2004 & year < 2013)
+		bysort installation_id (positive_emissions_year): g positive_emissions_2005_2012 = (positive_emissions_year[_N] > 0)
+		bysort year activity: egen number_inst_positive_co2_2005_12 = total(positive_emissions_2005_2012 == 1)
 		
 		collapse (first) number_inst*, by(activity year)
 		
@@ -136,6 +145,8 @@ global proc_data "${dropbox}/carbon_policy_reallocation/data/processed"
 	restore
 	
 	merge 1:1 activity year using "`installations'"
+	
+	save "${int_data}/activity_year_number_units.dta", replace
 	
 *------------------------------
 * Read in installation info
