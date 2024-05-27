@@ -1,12 +1,7 @@
 /*******************************************************************************
-Creates data sets at the industry level.
-
-In particular, creates
-
-1. data set at industry-year level with measures of within-industry dispersion in productivity,
-	and number of firms for which each of these productivity measures are available
-
-2. data set at industry-year level with number of firms and installations present in the data
+Creates data set data set at industry-year level with measures of
+within-industry dispersion in productivity and number of firms for
+which each of these productivity measures are available
 
 TO-DO/Obs:
 1. 
