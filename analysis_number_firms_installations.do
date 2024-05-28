@@ -48,7 +48,7 @@ global output "${dropbox}/carbon_policy_reallocation/output"
 				   xlabel(2005(5)2020) ///
 				   legend(label(1 "Active firms") label(2 "Active installations"))
 			   
-		*graph export "${output}/number_units_per_nace_`n'.png", as(png) replace
+		graph export "${output}/number_units_per_nace_`n'.png", as(png) replace
 	}
 	
 *------------------------------
@@ -61,7 +61,7 @@ global output "${dropbox}/carbon_policy_reallocation/output"
 	set scheme modern, perm
 	
 	local nacelist 35.11
-	local tolerance = 1e-6
+	local tolerance = 1e-6 // need to add this because nace4digit is float
 	foreach n of local nacelist {				   
 		twoway (line number_firms_positive_emissions year if abs(nace - `n') < `tolerance', ///
 					lcolor(black) lpattern(solid) yaxis(1)) ///
@@ -110,4 +110,26 @@ global output "${dropbox}/carbon_policy_reallocation/output"
 	keep activity number_inst_positive_co2_2005_12
 	
 	
+*------------------------------
+* Analysis at the aggregate level
+*------------------------------
+
+	use "${int_data}/nace2_year_number_units.dta", clear
 	
+	collapse (sum) number_firms_positive_emissions number_inst_positive_emissions, by(year)
+	
+	* set style of graphs
+	set scheme modern, perm
+				   
+	twoway (line number_firms_positive_emissions year, ///
+				lcolor(black) lpattern(solid) yaxis(1)) ///
+			   (line number_inst_positive_emissions year, ///
+				lcolor(red) lpattern(solid) yaxis(2)), ///
+			   title("") ///
+			   xtitle("") ///
+			   ytitle("Number of firms", axis(1)) ///
+			   ytitle("Number of installations", axis(2) angle(180)) ///
+			   xlabel(2005(5)2020) ///
+			   legend(label(1 "Active firms") label(2 "Active installations"))
+			   
+	graph export "${output}/number_units_aggregate.png", as(png) replace

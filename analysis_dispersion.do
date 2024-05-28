@@ -36,13 +36,13 @@ global output "${dropbox}/carbon_policy_reallocation/output"
 	set scheme modern, perm
 	
 *------------------------------
-* Create mean and std across sectors by year
+* Create mean and std ACROSS sectors by year
 *------------------------------
 		
 	foreach var in sales_co2 va_co2 sales_labor va_labor sales_capital va_capital {
 		
-		bysort year: egen avg_`var' = mean(p9010_nace_`var') if valid_nace_`var' >= 2
-		bysort year: egen std_`var' = sd(p9010_nace_`var') if valid_nace_`var' >= 2
+		bysort year: egen avg_`var' = mean(p9010_nace_`var') if valid_`var'_in_nace >= 2
+		bysort year: egen std_`var' = sd(p9010_nace_`var') if valid_`var'_in_nace >= 2
 		bysort year: egen n_industries_`var' = count(avg_`var')
 		
 		bysort year (avg_`var'): replace avg_`var' = avg_`var'[1]
@@ -70,7 +70,7 @@ global output "${dropbox}/carbon_policy_reallocation/output"
 		   ylabel(0(1)5) ///
 		   legend(label(1 "CO2") label(2 "Labor") label(3 "Capital"))
 		   
-	graph export "${output}/avg_dispersion.png", as(png) replace
+	*graph export "${output}/avg_dispersion.png", as(png) replace
 
 	restore
 	
@@ -130,13 +130,64 @@ global output "${dropbox}/carbon_policy_reallocation/output"
 					   ylabel(0(1)5) ///
 					   legend(label(1 "CO2") label(2 "Labor") label(3 "Capital") label(4 "# firms"))
 				   
-			graph export "${output}/dispersion_sector_`n'.png", as(png) replace
+			*graph export "${output}/dispersion_sector_`n'.png", as(png) replace
 		}
 
 	restore
 	
-	
-	
-	
+*------------------------------
+* Summary stats on CO2 productivity by activity
+*------------------------------
 
+	use "${proc_data}/prod_dispersion_activity.dta", clear
 	
+	keep if year <= 2020
+	
+	local activitylist 29 24
+	foreach n of local activitylist {				   
+		twoway (line p9010_activity_sales_co2 year if activity == `n', ///
+				lcolor(black) lpattern(dash_dot) yaxis(1)) ///
+			   (line p90_activity_sales_co2 year if activity == `n', ///
+				lcolor(blue) lpattern(solid) yaxis(2)) ///
+			   (line p10_activity_sales_co2 year if activity == `n', ///
+				lcolor(gs6) lpattern(solid) yaxis(2)) ///
+			   (line mean_activity_sales_co2 year if activity == `n', ///
+				lcolor(red) lpattern(solid) yaxis(2)), ///
+			    title("") ///
+			    xtitle("") ///
+			    ytitle("Difference in log points 90th - 10th percentile", axis(1)) ///
+			    ytitle("CO2 productivity", axis(2)) ///
+			    xlabel(2005(5)2020) ///
+			    legend(label(1 "Dispersion") label(2 "90th") label(3 "10th") label(4 "Mean"))
+			   
+		graph export "${output}/co2prod_quantiles_activity_`n'.png", as(png) replace
+	}
+	
+*------------------------------
+* Summary stats on CO2 productivity by nace
+*------------------------------
+	
+	use "${proc_data}/prod_dispersion_nace4.dta", clear
+	
+	keep if year <= 2020
+	
+	local activitylist 35.11
+	local tolerance = 1e-6 // need to add this because nace4digit is float
+	foreach n of local activitylist {				   
+		twoway (line p9010_activity_sales_co2 year if abs(nace - `n') < `tolerance', ///
+				lcolor(black) lpattern(dash_dot) yaxis(1)) ///
+			   (line p90_activity_sales_co2 year if abs(nace - `n') < `tolerance', ///
+				lcolor(blue) lpattern(solid) yaxis(2)) ///
+			   (line p10_activity_sales_co2 year if abs(nace - `n') < `tolerance', ///
+				lcolor(gs6) lpattern(solid) yaxis(2)) ///
+			   (line mean_activity_sales_co2 year if abs(nace - `n') < `tolerance', ///
+				lcolor(red) lpattern(solid) yaxis(2)), ///
+			    title("") ///
+			    xtitle("") ///
+			    ytitle("Difference in log points 90th - 10th percentile", axis(1)) ///
+			    ytitle("CO2 productivity", axis(2)) ///
+			    xlabel(2005(5)2020) ///
+			    legend(label(1 "Dispersion") label(2 "90th") label(3 "10th") label(4 "Mean"))
+			   
+		graph export "${output}/co2prod_quantiles_nace_`n'.png", as(png) replace
+	}
