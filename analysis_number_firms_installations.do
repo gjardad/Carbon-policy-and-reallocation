@@ -48,7 +48,7 @@ global output "${dropbox}/carbon_policy_reallocation/output"
 				   xlabel(2005(5)2020) ///
 				   legend(label(1 "Active firms") label(2 "Active installations"))
 			   
-		graph export "${output}/number_units_per_nace_`n'.png", as(png) replace
+		*graph export "${output}/number_units_per_nace_`n'.png", as(png) replace
 	}
 	
 *------------------------------
@@ -66,9 +66,9 @@ global output "${dropbox}/carbon_policy_reallocation/output"
 	local tolerance = 1e-6 // need to add this because nace4digit is float
 	foreach n of local nacelist {				   
 		twoway (line number_firms_positive_emissions year if abs(nace - `n') < `tolerance', ///
-					lcolor(black) lpattern(solid) yaxis(1)) ///
+				lcolor(black) lpattern(solid) yaxis(1)) ///
 			   (line number_firms_positive_sales year if abs(nace - `n') < `tolerance', ///
-					lcolor(gs6) lpattern(dash_dot) yaxis(1)) ///
+				lcolor(gs6) lpattern(dash_dot) yaxis(1)) ///
 			   (line number_inst_positive_emissions year if abs(nace - `n') < `tolerance', ///
 				lcolor(red) lpattern(solid) yaxis(2)), ///
 			   title("") ///
@@ -78,7 +78,7 @@ global output "${dropbox}/carbon_policy_reallocation/output"
 			   xlabel(2005(5)2020) ///
 			   legend(label(1 "Active firms in EUETS") label(2 "Firms in Orbis") label(3 "Active installations in EUETS"))
 			   
-		*graph export "${output}/number_units_per_nace_`n'.png", as(png) replace
+		graph export "${output}/number_units_per_nace_`n'.png", as(png) replace
 	}
 	
 *------------------------------
@@ -89,6 +89,8 @@ global output "${dropbox}/carbon_policy_reallocation/output"
 	
 	* set style of graphs
 	set scheme modern, perm
+	
+	keep if year <= 2019
 	
 	local activitylist "24 29"
 	foreach n of local activitylist {				   
@@ -119,9 +121,13 @@ global output "${dropbox}/carbon_policy_reallocation/output"
 	
 	* set style of graphs
 	set scheme modern, perm
+	
+	keep if year <= 2019
 				   
 	twoway (line number_firms_positive_emissions year, ///
-				lcolor(black) lpattern(solid) yaxis(1)) ///
+			lcolor(black) lpattern(solid) yaxis(1)) ///
+		   (line number_firms_positive_sales year, ///
+			lcolor(gs6) lpattern(dash_dot) yaxis(1)) ///
 		   (line number_inst_positive_emissions year, ///
 			lcolor(red) lpattern(solid) yaxis(2)), ///
 		   title("") ///
@@ -129,7 +135,7 @@ global output "${dropbox}/carbon_policy_reallocation/output"
 		   ytitle("Number of firms", axis(1)) ///
 		   ytitle("Number of installations", axis(2) angle(180)) ///
 		   xlabel(2005(5)2020) ///
-		   legend(label(1 "Active firms") label(2 "Active installations") )
+		   legend(label(1 "Active firms in EUETS") label(2 "Firms in Orbis") label(3 "Active installations in EUETS"))
 			   
 	graph export "${output}/number_units_aggregate.png", as(png) replace
 	
@@ -160,3 +166,28 @@ global output "${dropbox}/carbon_policy_reallocation/output"
 	replace activity_id = 36 if activity_id == 9
 	
 	drop if activity_id == 1000
+	
+*------------------------------
+* Number of firms in electricity sector in Portugual and Spain (Mar requested it)
+*------------------------------
+
+	use "${int_data}/firm_year.dta", clear
+	
+	replace nace = nace_orbis/100 if missing(nace)
+	
+	g country = substr(bvdid, 1, 2)
+	
+	count if country == "ES" &  abs(nace - 35.11) < 1e-6 & year == 2013
+	count if country == "PT" &  abs(nace - 35.11) < 1e-6 & year == 2013
+	
+*------------------------------
+* Number of installations in electricity sector in Portugual and Spain (Mar requested it)
+*------------------------------
+
+	use "${int_data}/installation_year_emissions.dta", clear
+	
+	g country = substr(bvdid, 1, 2)
+	
+	count if country == "ES" &  abs(nace - 35.11) < 1e-6 & year == 2013
+	count if country == "PT" &  abs(nace - 35.11) < 1e-6 & year == 2013
+

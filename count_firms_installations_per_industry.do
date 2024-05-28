@@ -151,7 +151,7 @@ global proc_data "${dropbox}/carbon_policy_reallocation/data/processed"
 	bysort year activity (number_firms_positive_emissions): replace number_firms_positive_emissions = number_firms_positive_emissions[1] if missing(number_firms_positive_emissions)
 	
 	bysort year activity: egen number_firms_positive_sales = count(bvdid) if sales > 0 & !missing(sales)
-	bysort year nace (number_firms_positive_sales): replace number_firms_positive_sales = number_firms_positive_sales[1] if missing(number_firms_positive_sales)
+	bysort year activity (number_firms_positive_sales): replace number_firms_positive_sales = number_firms_positive_sales[1] if missing(number_firms_positive_sales)
 	
 	collapse (first) number_firms*, by(activity year)
 	
