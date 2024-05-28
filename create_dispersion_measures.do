@@ -45,16 +45,18 @@ global proc_data "${dropbox}/carbon_policy_reallocation/data/processed"
 	gen sales_capital = log(sales/capital)
 	gen va_capital = log(va/capital)
 	
-	rename nace nace_4digit
-	gen str nace_str = string(nace_4digit, "%9.2f")
+	rename nace nace4
+	gen str nace_str = string(nace4, "%9.2f")
 	gen dot_pos = strpos(nace_str, ".")
-	gen str nace = substr(nace_str, 1, dot_pos - 1) // extract digits before dot
+	gen str nace2 = substr(nace_str, 1, dot_pos - 1) // extract digits before dot
 	
-	replace nace = substr(string(nace_orbis), 1, 2) if missing(nace)
-	replace nace = "" if nace == "."
+	replace nace2 = substr(string(nace_orbis), 1, 2) if missing(nace2)
+	replace nace2 = "" if nace2 == "."
+	
+	replace nace4 = nace_orbis if missing(nace4)
 	
 	// within-industry heterogeneity in productivity measures
-	foreach ind in activity nace{
+	foreach ind in activity nace2 nace4{
 		
 		foreach var in sales_co2 va_co2 sales_labor va_labor sales_capital va_capital {
 			
@@ -79,11 +81,13 @@ global proc_data "${dropbox}/carbon_policy_reallocation/data/processed"
 	}
 	
 *------------------------------
-* Create dispersion data sets at the activity and NACE code levels
+* Create dispersion data sets at the activity, nace2, and nace4 code levels
 *------------------------------
 	preserve
 	
-		collapse (first) p9010_activity_sales_co2 p9010_activity_sales_labor p9010_activity_sales_capital, by(activity year) 
+		collapse (first) p9010_activity_sales_co2 p9010_activity_sales_labor p9010_activity_sales_capital ///
+						 p90_activity_sales_co2 p10_activity_sales_co2 mean_activity_sales_co2 ///
+						 median_activity_sales_co2, by(activity year) 
 		
 		save "${proc_data}/prod_dispersion_activity.dta", replace
 		
@@ -91,14 +95,31 @@ global proc_data "${dropbox}/carbon_policy_reallocation/data/processed"
 	
 	preserve
 		
-		collapse (first) p9010_nace_sales_co2 p9010_nace_sales_labor p9010_nace_sales_capital ///
-						 valid_sales_co2_in_nace valid_sales_labor_in_nace valid_sales_capital_in_nace ///
-						 p9010_nace_va_co2 p9010_nace_va_labor p9010_nace_va_capital ///
-						 valid_va_co2_in_nace valid_va_labor_in_nace valid_va_capital_in_nace, by(nace year)
+		collapse (first) p9010_nace2_sales_co2 p9010_nace2_sales_labor p9010_nace2_sales_capital ///
+						 valid_sales_co2_in_nace2 valid_sales_labor_in_nace2 valid_sales_capital_in_nace2 ///
+						 p9010_nace2_va_co2 p9010_nace2_va_labor p9010_nace2_va_capital ///
+						 valid_va_co2_in_nace2 valid_va_labor_in_nace2 valid_va_capital_in_nace2 ///
+						 p90_nace2_sales_co2 p10_nace2_sales_co2 mean_nace2_sales_co2 ///
+						 median_nace2_sales_co2, by(nace2 year)
 						 
-		drop if missing(nace)
+		drop if missing(nace2)
 
-		save "${proc_data}/prod_dispersion_nace.dta", replace
+		save "${proc_data}/prod_dispersion_nace2.dta", replace
+		
+	restore
+	
+	preserve
+		
+		collapse (first) p9010_nace4_sales_co2 p9010_nace4_sales_labor p9010_nace4_sales_capital ///
+						 valid_sales_co2_in_nace4 valid_sales_labor_in_nace4 valid_sales_capital_in_nace4 ///
+						 p9010_nace4_va_co2 p9010_nace4_va_labor p9010_nace4_va_capital ///
+						 valid_va_co2_in_nace4 valid_va_labor_in_nace4 valid_va_capital_in_nace4 ///
+						 p90_nace4_sales_co2 p10_nace4_sales_co2 mean_nace4_sales_co2 ///
+						 median_nace4_sales_co2, by(nace4 year)
+						 
+		drop if missing(nace4)
+
+		save "${proc_data}/prod_dispersion_nace4.dta", replace
 		
 	restore
 	

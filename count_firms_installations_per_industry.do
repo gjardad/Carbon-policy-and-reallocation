@@ -29,7 +29,7 @@ global int_data "${dropbox}/carbon_policy_reallocation/data/intermediate"
 global proc_data "${dropbox}/carbon_policy_reallocation/data/processed"
 
 *------------------------------
-* Create data set at nace-year level with number of firms and installations
+* Create data set at nace_2digit-year level with number of firms and installations
 *------------------------------
 
 	use "${int_data}/firm_year.dta", clear
@@ -45,6 +45,9 @@ global proc_data "${dropbox}/carbon_policy_reallocation/data/processed"
 	bysort year nace: egen number_firms = count(bvdid)
 	bysort year nace: egen number_firms_positive_emissions = count(bvdid) if co2 > 0 & !missing(co2)
 	bysort year nace (number_firms_positive_emissions): replace number_firms_positive_emissions = number_firms_positive_emissions[1] if missing(number_firms_positive_emissions)
+	
+	bysort year nace: egen number_firms_positive_sales = count(bvdid) if sales > 0 & !missing(sales)
+	bysort year nace (number_firms_positive_sales): replace number_firms_positive_sales = number_firms_positive_sales[1] if missing(number_firms_positive_sales)
 	
 	collapse (first) number_firms*, by(nace year)
 	
@@ -78,7 +81,51 @@ global proc_data "${dropbox}/carbon_policy_reallocation/data/processed"
 	
 	merge 1:1 nace year using "`installations'"
 	
-	save "${int_data}/nace_year_number_units.dta", replace
+	save "${int_data}/nace2_year_number_units.dta", replace
+	
+*------------------------------
+* Create data set at nace_4digit-year level with number of firms and installations
+*------------------------------
+
+	use "${int_data}/firm_year.dta", clear
+	
+	replace nace = nace_orbis/100 if missing(nace)
+	
+	bysort year nace: egen number_firms = count(bvdid)
+	bysort year nace: egen number_firms_positive_emissions = count(bvdid) if co2 > 0 & !missing(co2)
+	bysort year nace (number_firms_positive_emissions): replace number_firms_positive_emissions = number_firms_positive_emissions[1] if missing(number_firms_positive_emissions)
+	
+	bysort year nace: egen number_firms_positive_sales = count(bvdid) if sales > 0 & !missing(sales)
+	bysort year nace (number_firms_positive_sales): replace number_firms_positive_sales = number_firms_positive_sales[1] if missing(number_firms_positive_sales)
+	
+	collapse (first) number_firms*, by(nace year)
+	
+	drop if missing(nace)
+	
+	preserve
+	
+		tempfile installations
+		
+		use "${int_data}/installation_year_emissions.dta", clear
+		
+		bysort year nace: egen number_installations = count(installation_id)
+		bysort year nace: egen number_inst_positive_emissions = count(installation_id) ///
+		if verified > 0 & !missing(verified)
+		bysort year nace (number_inst_positive_emissions): replace number_inst_positive_emissions =number_inst_positive_emissions[1] if missing(number_inst_positive_emissions)
+		
+		collapse (first) number_inst*, by(nace year)
+		
+		keep if !missing(nace)
+		
+		rename nace_id nace
+		
+		save "`installations'"
+		
+	restore
+	
+	merge 1:1 nace year using "`installations'"
+	
+	save "${int_data}/nace4_year_number_units.dta", replace
 	
 *------------------------------
 * Create data set at activity-year level with number of firms and installations
@@ -102,6 +149,9 @@ global proc_data "${dropbox}/carbon_policy_reallocation/data/processed"
 	bysort year activity: egen number_firms = count(bvdid)
 	bysort year activity: egen number_firms_positive_emissions = count(bvdid) if co2 > 0 & !missing(co2)
 	bysort year activity (number_firms_positive_emissions): replace number_firms_positive_emissions = number_firms_positive_emissions[1] if missing(number_firms_positive_emissions)
+	
+	bysort year activity: egen number_firms_positive_sales = count(bvdid) if sales > 0 & !missing(sales)
+	bysort year activity (number_firms_positive_sales): replace number_firms_positive_sales = number_firms_positive_sales[1] if missing(number_firms_positive_sales)
 	
 	collapse (first) number_firms*, by(activity year)
 	
@@ -147,31 +197,3 @@ global proc_data "${dropbox}/carbon_policy_reallocation/data/processed"
 	merge 1:1 activity year using "`installations'"
 	
 	save "${int_data}/activity_year_number_units.dta", replace
-	
-*------------------------------
-* Read in installation info
-*------------------------------
-
-	import delimited "${raw_data}/EUTL/installation.csv", clear
-	
-	rename id installation_id
-	
-	// as a sanity check, I want to compare our data with info on tables from
-	// Verde et al (2019) "Installation entries and exits in the EU ETS"
-	// (${dropbox}/carbon_policy_reallocation/literature)
-	// in particular, their table A2
-	
-	// update activity categories according to
-	// EEA (2014) EU ETS data view user manual
-	// (${dropbox}/carbon_policy_reallocation/manuals)
-	replace activity_id = 20 if activity_id == 1
-	replace activity_id = 21 if activity_id == 2
-	replace activity_id = 22 if activity_id == 3
-	replace activity_id = 23 if activity_id == 4
-	replace activity_id = 24 if activity_id == 5
-	replace activity_id = 29 if activity_id == 6
-	replace activity_id = 31 if activity_id == 7
-	replace activity_id = 32 if activity_id == 8
-	replace activity_id = 36 if activity_id == 9
-	
-	drop if activity_id == 1000
