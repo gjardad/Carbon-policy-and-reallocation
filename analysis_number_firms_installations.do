@@ -166,28 +166,4 @@ global output "${dropbox}/carbon_policy_reallocation/output"
 	replace activity_id = 36 if activity_id == 9
 	
 	drop if activity_id == 1000
-	
-*------------------------------
-* Number of firms in electricity sector in Portugual and Spain (Mar requested it)
-*------------------------------
-
-	use "${int_data}/firm_year.dta", clear
-	
-	replace nace = nace_orbis/100 if missing(nace)
-	
-	g country = substr(bvdid, 1, 2)
-	
-	count if country == "ES" &  abs(nace - 35.11) < 1e-6 & year == 2013
-	count if country == "PT" &  abs(nace - 35.11) < 1e-6 & year == 2013
-	
-*------------------------------
-* Number of installations in electricity sector in Portugual and Spain (Mar requested it)
-*------------------------------
-
-	use "${int_data}/installation_year_emissions.dta", clear
-	
-	g country = substr(bvdid, 1, 2)
-	
-	count if country == "ES" &  abs(nace - 35.11) < 1e-6 & year == 2013
-	count if country == "PT" &  abs(nace - 35.11) < 1e-6 & year == 2013
 
