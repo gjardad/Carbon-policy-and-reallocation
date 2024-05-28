@@ -46,6 +46,9 @@ global proc_data "${dropbox}/carbon_policy_reallocation/data/processed"
 	bysort year nace: egen number_firms_positive_emissions = count(bvdid) if co2 > 0 & !missing(co2)
 	bysort year nace (number_firms_positive_emissions): replace number_firms_positive_emissions = number_firms_positive_emissions[1] if missing(number_firms_positive_emissions)
 	
+	bysort year nace: egen number_firms_positive_sales = count(bvdid) if sales > 0 & !missing(sales)
+	bysort year nace (number_firms_positive_sales): replace number_firms_positive_sales = number_firms_positive_sales[1] if missing(number_firms_positive_sales)
+	
 	collapse (first) number_firms*, by(nace year)
 	
 	drop if missing(nace)
@@ -91,6 +94,9 @@ global proc_data "${dropbox}/carbon_policy_reallocation/data/processed"
 	bysort year nace: egen number_firms = count(bvdid)
 	bysort year nace: egen number_firms_positive_emissions = count(bvdid) if co2 > 0 & !missing(co2)
 	bysort year nace (number_firms_positive_emissions): replace number_firms_positive_emissions = number_firms_positive_emissions[1] if missing(number_firms_positive_emissions)
+	
+	bysort year nace: egen number_firms_positive_sales = count(bvdid) if sales > 0 & !missing(sales)
+	bysort year nace (number_firms_positive_sales): replace number_firms_positive_sales = number_firms_positive_sales[1] if missing(number_firms_positive_sales)
 	
 	collapse (first) number_firms*, by(nace year)
 	
@@ -144,6 +150,9 @@ global proc_data "${dropbox}/carbon_policy_reallocation/data/processed"
 	bysort year activity: egen number_firms_positive_emissions = count(bvdid) if co2 > 0 & !missing(co2)
 	bysort year activity (number_firms_positive_emissions): replace number_firms_positive_emissions = number_firms_positive_emissions[1] if missing(number_firms_positive_emissions)
 	
+	bysort year activity: egen number_firms_positive_sales = count(bvdid) if sales > 0 & !missing(sales)
+	bysort year nace (number_firms_positive_sales): replace number_firms_positive_sales = number_firms_positive_sales[1] if missing(number_firms_positive_sales)
+	
 	collapse (first) number_firms*, by(activity year)
 	
 	preserve
@@ -188,31 +197,3 @@ global proc_data "${dropbox}/carbon_policy_reallocation/data/processed"
 	merge 1:1 activity year using "`installations'"
 	
 	save "${int_data}/activity_year_number_units.dta", replace
-	
-*------------------------------
-* Read in installation info
-*------------------------------
-
-	import delimited "${raw_data}/EUTL/installation.csv", clear
-	
-	rename id installation_id
-	
-	// as a sanity check, I want to compare our data with info on tables from
-	// Verde et al (2019) "Installation entries and exits in the EU ETS"
-	// (${dropbox}/carbon_policy_reallocation/literature)
-	// in particular, their table A2
-	
-	// update activity categories according to
-	// EEA (2014) EU ETS data view user manual
-	// (${dropbox}/carbon_policy_reallocation/manuals)
-	replace activity_id = 20 if activity_id == 1
-	replace activity_id = 21 if activity_id == 2
-	replace activity_id = 22 if activity_id == 3
-	replace activity_id = 23 if activity_id == 4
-	replace activity_id = 24 if activity_id == 5
-	replace activity_id = 29 if activity_id == 6
-	replace activity_id = 31 if activity_id == 7
-	replace activity_id = 32 if activity_id == 8
-	replace activity_id = 36 if activity_id == 9
-	
-	drop if activity_id == 1000

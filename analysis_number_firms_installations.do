@@ -60,21 +60,25 @@ global output "${dropbox}/carbon_policy_reallocation/output"
 	* set style of graphs
 	set scheme modern, perm
 	
+	keep if year <= 2019
+	
 	local nacelist 35.11
 	local tolerance = 1e-6 // need to add this because nace4digit is float
 	foreach n of local nacelist {				   
 		twoway (line number_firms_positive_emissions year if abs(nace - `n') < `tolerance', ///
 					lcolor(black) lpattern(solid) yaxis(1)) ///
-				   (line number_inst_positive_emissions year if abs(nace - `n') < `tolerance', ///
-					lcolor(red) lpattern(solid) yaxis(2)), ///
-				   title("") ///
-				   xtitle("") ///
-				   ytitle("Number of firms", axis(1)) ///
-				   ytitle("Number of installations", axis(2) angle(180)) ///
-				   xlabel(2005(5)2020) ///
-				   legend(label(1 "Active firms") label(2 "Active installations"))
+			   (line number_firms_positive_sales year if abs(nace - `n') < `tolerance', ///
+					lcolor(gs6) lpattern(dash_dot) yaxis(1)) ///
+			   (line number_inst_positive_emissions year if abs(nace - `n') < `tolerance', ///
+				lcolor(red) lpattern(solid) yaxis(2)), ///
+			   title("") ///
+			   xtitle("") ///
+			   ytitle("Number of firms", axis(1)) ///
+			   ytitle("Number of installations", axis(2) angle(180)) ///
+			   xlabel(2005(5)2020) ///
+			   legend(label(1 "Active firms in EUETS") label(2 "Firms in Orbis") label(3 "Active installations in EUETS"))
 			   
-		graph export "${output}/number_units_per_nace_`n'.png", as(png) replace
+		*graph export "${output}/number_units_per_nace_`n'.png", as(png) replace
 	}
 	
 *------------------------------
@@ -90,25 +94,19 @@ global output "${dropbox}/carbon_policy_reallocation/output"
 	foreach n of local activitylist {				   
 		twoway (line number_firms_positive_emissions year if activity == `n', ///
 					lcolor(black) lpattern(solid) yaxis(1)) ///
-				   (line number_inst_positive_emissions year if activity == `n', ///
-					lcolor(red) lpattern(solid) yaxis(2)), ///
+			   (line number_firms_positive_sales year if activity == `n', ///
+					lcolor(gs6) lpattern(dash_dot) yaxis(1)) ///
+			   (line number_inst_positive_emissions year if activity == `n', ///
+				lcolor(red) lpattern(solid) yaxis(2)), ///
 				   title("") ///
 				   xtitle("") ///
 				   ytitle("Number of firms", axis(1)) ///
 				   ytitle("Number of installations", axis(2) angle(180)) ///
 				   xlabel(2005(5)2020) ///
-				   legend(label(1 "Active firms") label(2 "Active installations"))
+				   legend(label(1 "Active firms in EUETS") label(2 "Firms in Orbis") label(3 "Active installations in EUETS"))
 			   
 		graph export "${output}/number_units_per_activity_`n'.png", as(png) replace
-	}
-	
-	* table comparable to table A2 in Verde et al (2019)
-	// "Installation entries and exits in the EU ETS"
-	// (${dropbox}/carbon_policy_reallocation/literature)
-	
-	keep if year == 2005
-	keep activity number_inst_positive_co2_2005_12
-	
+	}	
 	
 *------------------------------
 * Analysis at the aggregate level
@@ -116,21 +114,22 @@ global output "${dropbox}/carbon_policy_reallocation/output"
 
 	use "${int_data}/nace2_year_number_units.dta", clear
 	
-	collapse (sum) number_firms_positive_emissions number_inst_positive_emissions, by(year)
+	collapse (sum) number_firms_positive_emissions number_inst_positive_emissions ///
+				   number_firms_positive_sales, by(year)
 	
 	* set style of graphs
 	set scheme modern, perm
 				   
 	twoway (line number_firms_positive_emissions year, ///
 				lcolor(black) lpattern(solid) yaxis(1)) ///
-			   (line number_inst_positive_emissions year, ///
-				lcolor(red) lpattern(solid) yaxis(2)), ///
-			   title("") ///
-			   xtitle("") ///
-			   ytitle("Number of firms", axis(1)) ///
-			   ytitle("Number of installations", axis(2) angle(180)) ///
-			   xlabel(2005(5)2020) ///
-			   legend(label(1 "Active firms") label(2 "Active installations"))
+		   (line number_inst_positive_emissions year, ///
+			lcolor(red) lpattern(solid) yaxis(2)), ///
+		   title("") ///
+		   xtitle("") ///
+		   ytitle("Number of firms", axis(1)) ///
+		   ytitle("Number of installations", axis(2) angle(180)) ///
+		   xlabel(2005(5)2020) ///
+		   legend(label(1 "Active firms") label(2 "Active installations") )
 			   
 	graph export "${output}/number_units_aggregate.png", as(png) replace
 	
