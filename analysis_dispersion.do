@@ -30,7 +30,7 @@ global output "${dropbox}/carbon_policy_reallocation/output"
 * Read in nace-year-level data
 *------------------------------
 
-	use "${proc_data}/prod_dispersion_nace.dta", clear
+	use "${proc_data}/prod_dispersion_nace2.dta", clear
 	
 	* set style of graphs
 	set scheme modern, perm
@@ -106,7 +106,7 @@ global output "${dropbox}/carbon_policy_reallocation/output"
 	// Separate graphs for the 5-most polluting sectors
 	preserve
 		
-		keep if year <= 2020 & inlist(nace, "35", "20", "24", "23", "19")
+		keep if year <= 2020 & inlist(nace2, "35", "20", "24", "23", "19")
 		
 		egen avg_number_valid_firms = ///
 		     rowmean(valid_nace_sales_co2 valid_nace_sales_labor valid_nace_sales_capital)
@@ -174,13 +174,13 @@ global output "${dropbox}/carbon_policy_reallocation/output"
 	local activitylist 35.11
 	local tolerance = 1e-6 // need to add this because nace4digit is float
 	foreach n of local activitylist {				   
-		twoway (line p9010_activity_sales_co2 year if abs(nace - `n') < `tolerance', ///
+		twoway (line p9010_nace4_sales_co2 year if abs(nace - `n') < `tolerance', ///
 				lcolor(black) lpattern(dash_dot) yaxis(1)) ///
-			   (line p90_activity_sales_co2 year if abs(nace - `n') < `tolerance', ///
+			   (line p90_nace4_sales_co2 year if abs(nace - `n') < `tolerance', ///
 				lcolor(blue) lpattern(solid) yaxis(2)) ///
-			   (line p10_activity_sales_co2 year if abs(nace - `n') < `tolerance', ///
+			   (line p10_nace4_sales_co2 year if abs(nace - `n') < `tolerance', ///
 				lcolor(gs6) lpattern(solid) yaxis(2)) ///
-			   (line mean_activity_sales_co2 year if abs(nace - `n') < `tolerance', ///
+			   (line mean_nace4_sales_co2 year if abs(nace - `n') < `tolerance', ///
 				lcolor(red) lpattern(solid) yaxis(2)), ///
 			    title("") ///
 			    xtitle("") ///

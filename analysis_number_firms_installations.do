@@ -133,3 +133,31 @@ global output "${dropbox}/carbon_policy_reallocation/output"
 			   legend(label(1 "Active firms") label(2 "Active installations"))
 			   
 	graph export "${output}/number_units_aggregate.png", as(png) replace
+	
+*------------------------------
+* Comparison with Verde et al (2019)
+*------------------------------
+
+	import delimited "${raw_data}/EUTL/installation.csv", clear
+	
+	rename id installation_id
+	
+	// as a sanity check, I want to compare our data with info on tables from
+	// Verde et al (2019) "Installation entries and exits in the EU ETS"
+	// (${dropbox}/carbon_policy_reallocation/literature)
+	// in particular, their table A2
+	
+	// update activity categories according to
+	// EEA (2014) EU ETS data view user manual
+	// (${dropbox}/carbon_policy_reallocation/manuals)
+	replace activity_id = 20 if activity_id == 1
+	replace activity_id = 21 if activity_id == 2
+	replace activity_id = 22 if activity_id == 3
+	replace activity_id = 23 if activity_id == 4
+	replace activity_id = 24 if activity_id == 5
+	replace activity_id = 29 if activity_id == 6
+	replace activity_id = 31 if activity_id == 7
+	replace activity_id = 32 if activity_id == 8
+	replace activity_id = 36 if activity_id == 9
+	
+	drop if activity_id == 1000

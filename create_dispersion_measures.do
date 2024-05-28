@@ -119,7 +119,7 @@ global proc_data "${dropbox}/carbon_policy_reallocation/data/processed"
 						 
 		drop if missing(nace4)
 
-		save "${proc_data}/prod_dispersion_nace2.dta", replace
+		save "${proc_data}/prod_dispersion_nace4.dta", replace
 		
 	restore
 	
