@@ -29,7 +29,7 @@ global int_data "${dropbox}/carbon_policy_reallocation/data/intermediate"
 global proc_data "${dropbox}/carbon_policy_reallocation/data/processed"
 
 *------------------------------
-* Create data set at nace-year level with number of firms and installations
+* Create data set at nace_2digit-year level with number of firms and installations
 *------------------------------
 
 	use "${int_data}/firm_year.dta", clear
@@ -78,7 +78,48 @@ global proc_data "${dropbox}/carbon_policy_reallocation/data/processed"
 	
 	merge 1:1 nace year using "`installations'"
 	
-	save "${int_data}/nace_year_number_units.dta", replace
+	save "${int_data}/nace2_year_number_units.dta", replace
+	
+*------------------------------
+* Create data set at nace_4digit-year level with number of firms and installations
+*------------------------------
+
+	use "${int_data}/firm_year.dta", clear
+	
+	replace nace = nace_orbis/100 if missing(nace)
+	
+	bysort year nace: egen number_firms = count(bvdid)
+	bysort year nace: egen number_firms_positive_emissions = count(bvdid) if co2 > 0 & !missing(co2)
+	bysort year nace (number_firms_positive_emissions): replace number_firms_positive_emissions = number_firms_positive_emissions[1] if missing(number_firms_positive_emissions)
+	
+	collapse (first) number_firms*, by(nace year)
+	
+	drop if missing(nace)
+	
+	preserve
+	
+		tempfile installations
+		
+		use "${int_data}/installation_year_emissions.dta", clear
+		
+		bysort year nace: egen number_installations = count(installation_id)
+		bysort year nace: egen number_inst_positive_emissions = count(installation_id) ///
+		if verified > 0 & !missing(verified)
+		bysort year nace (number_inst_positive_emissions): replace number_inst_positive_emissions =number_inst_positive_emissions[1] if missing(number_inst_positive_emissions)
+		
+		collapse (first) number_inst*, by(nace year)
+		
+		keep if !missing(nace)
+		
+		rename nace_id nace
+		
+		save "`installations'"
+		
+	restore
+	
+	merge 1:1 nace year using "`installations'"
+	
+	save "${int_data}/nace4_year_number_units.dta", replace
 	
 *------------------------------
 * Create data set at activity-year level with number of firms and installations

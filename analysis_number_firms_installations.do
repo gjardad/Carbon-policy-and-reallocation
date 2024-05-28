@@ -27,10 +27,10 @@ global proc_data "${dropbox}/carbon_policy_reallocation/data/processed"
 global output "${dropbox}/carbon_policy_reallocation/output"
 
 *------------------------------
-* Read in nace-year-level data
+* Analysis at the nace_2digit-year level
 *------------------------------
 
-	use "${int_data}/nace_year_number_units.dta", clear
+	use "${int_data}/nace2_year_number_units.dta", clear
 	
 	* set style of graphs
 	set scheme modern, perm
@@ -52,7 +52,32 @@ global output "${dropbox}/carbon_policy_reallocation/output"
 	}
 	
 *------------------------------
-* Read in activity-year-level data
+* Analysis at the nace_4digit-year level
+*------------------------------
+
+	use "${int_data}/nace2_year_number_units.dta", clear
+	
+	* set style of graphs
+	set scheme modern, perm
+	
+	local nacelist "35 23 24"
+	foreach n of local nacelist {				   
+		twoway (line number_firms_positive_emissions year if nace == `"`n'"', ///
+					lcolor(black) lpattern(solid) yaxis(1)) ///
+				   (line number_inst_positive_emissions year if nace == `"`n'"', ///
+					lcolor(red) lpattern(solid) yaxis(2)), ///
+				   title("") ///
+				   xtitle("") ///
+				   ytitle("Number of firms", axis(1)) ///
+				   ytitle("Number of installations", axis(2) angle(180)) ///
+				   xlabel(2005(5)2020) ///
+				   legend(label(1 "Active firms") label(2 "Active installations"))
+			   
+		graph export "${output}/number_units_per_nace_`n'.png", as(png) replace
+	}
+	
+*------------------------------
+* Analysis at the activity-year level
 *------------------------------
 
 	use "${int_data}/activity_year_number_units.dta", clear
