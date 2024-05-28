@@ -48,23 +48,24 @@ global output "${dropbox}/carbon_policy_reallocation/output"
 				   xlabel(2005(5)2020) ///
 				   legend(label(1 "Active firms") label(2 "Active installations"))
 			   
-		graph export "${output}/number_units_per_nace_`n'.png", as(png) replace
+		*graph export "${output}/number_units_per_nace_`n'.png", as(png) replace
 	}
 	
 *------------------------------
 * Analysis at the nace_4digit-year level
 *------------------------------
 
-	use "${int_data}/nace2_year_number_units.dta", clear
+	use "${int_data}/nace4_year_number_units.dta", clear
 	
 	* set style of graphs
 	set scheme modern, perm
 	
-	local nacelist "35 23 24"
+	local nacelist 35.11
+	local tolerance = 1e-6
 	foreach n of local nacelist {				   
-		twoway (line number_firms_positive_emissions year if nace == `"`n'"', ///
+		twoway (line number_firms_positive_emissions year if abs(nace - `n') < `tolerance', ///
 					lcolor(black) lpattern(solid) yaxis(1)) ///
-				   (line number_inst_positive_emissions year if nace == `"`n'"', ///
+				   (line number_inst_positive_emissions year if abs(nace - `n') < `tolerance', ///
 					lcolor(red) lpattern(solid) yaxis(2)), ///
 				   title("") ///
 				   xtitle("") ///
