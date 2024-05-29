@@ -52,3 +52,16 @@ global output "${dropbox}/carbon_policy_reallocation/output"
 	count if country == "ES" &  abs(nace - 35.11) < 1e-6 & year == 2013
 	count if country == "PT" &  abs(nace - 35.11) < 1e-6 & year == 2013
 	
+*------------------------------
+* Get names for electricity companies in Spain and Portugal
+*------------------------------
+
+	import delimited "${raw_data}/EUTL/installation.csv", clear
+	
+	rename id installation_id
+	
+	keep if country_id == "ES" & nace_id > 35.101 & nace_id < 35.12
+	
+	
+	
+	
