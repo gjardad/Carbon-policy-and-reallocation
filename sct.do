@@ -86,9 +86,10 @@ global proc_data "${dropbox}/carbon_policy_reallocation/data/processed"
 	// using data wout imputation
 	use "${int_data}/balanced_panel_wout_imputing_sales.dta", clear
 	
-	keep bvdid year co2 sales nace4 nace2 activity
+	*keep bvdid year co2 sales nace4 nace2 activity
 
 	bysort year: egen agg_output = total(sales)
+	bysort year: egen agg_va = total(va)
 	bysort year: egen agg_emissions = total(co2)
 	bysort year: g agg_ei = agg_emissions/agg_output
 
@@ -143,11 +144,6 @@ global proc_data "${dropbox}/carbon_policy_reallocation/data/processed"
 	}
 	
 	collapse (first) scale*, by(year)
-
-
-	
-	
-	
 	
 	
 
