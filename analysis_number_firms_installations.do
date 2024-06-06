@@ -92,7 +92,7 @@ global output "${dropbox}/carbon_policy_reallocation/output"
 	
 	keep if year <= 2019
 	
-	local activitylist "24 29"
+	local activitylist "30 26"
 	foreach n of local activitylist {				   
 		twoway (line number_firms_positive_emissions year if activity == `n', ///
 					lcolor(black) lpattern(solid) yaxis(1)) ///
