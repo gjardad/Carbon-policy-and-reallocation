@@ -26,4 +26,10 @@ global proc_data "${dropbox}/carbon_policy_reallocation/data/processed"
 * Read in industry-country data from Eurostat
 *------------------------------
 
-	import 
+	import delimited "${raw_data}/Eurostat/industry_output_current_prices.csv", clear
+	
+	keep nace geo time obs_value
+	
+	rename nace_r2 nace_r2
+	rename time_period time
+	rename obs_value output
