@@ -22,6 +22,30 @@ global raw_data "${dropbox}/carbon_policy_reallocation/data/raw"
 global int_data "${dropbox}/carbon_policy_reallocation/data/intermediate"
 global proc_data "${dropbox}/carbon_policy_reallocation/data/processed"
 
+*------------------------------
+* Which firms in Orbis have zero sales in 2019?
+*------------------------------
+
+	use "${int_data}/firm_year.dta", clear
+	
+	drop capital labor
+	
+	rename nace nace4
+	gen str nace_str = string(nace4, "%9.2f")
+	gen dot_pos = strpos(nace_str, ".")
+	gen str nace2 = substr(nace_str, 1, dot_pos - 1) // extract digits before dot
+	
+	replace nace2 = substr(string(nace_orbis), 1, 2) if missing(nace2)
+	replace nace2 = "" if nace2 == "."
+	
+	replace nace4 = nace_orbis/100 if missing(nace4)
+	
+	g positive_sales_13 = (sales > 0 & year == 2013 & !missing(sales))
+	bysort bvdid (positive_sales_13): replace positive_sales_13 = positive_sales_13[_N]
+	
+	g positive_sales_19 = (sales > 0 & year == 2019 & !missing(sales))
+	bysort bvdid (positive_sales_19): replace positive_sales_19 = positive_sales_19[_N]
+	
 
 *------------------------------
 * Generate country-year-sector data on output from Orbis
@@ -276,5 +300,11 @@ global proc_data "${dropbox}/carbon_policy_reallocation/data/processed"
 	
 	g representative_in_2013 = (orbis_pct < 1 & orbis_pct > 0.5 & year == 2013)
 	bysort country nace (representative_in_2013): replace representative_in_2013 = representative_in_2013[_N]
+	
+	keep if representative == 1
+	egen group = group(country nace)
+	twoway (line orbis_pct year if !missing(orbis_pct), connect(l) lcolor(%20)) ///
+       (scatter orbis_pct year if !missing(orbis_pct), msymbol(circle) mcolor(%20)), ///
+       by(country nace) 
 	
 	
