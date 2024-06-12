@@ -1,37 +1,7 @@
 /*******************************************************************************
-Creates data set at the firm-year level with information on
-1. emissions
-2. BvD id
-3. acitivity ids (from EUTL)
-4. nace ids (from EUTL)
-5. nace codes (from ORBIS)
-5. added value
-6. sales
+Evaluate orbis coverage using a subset of industries in france
 
-TO-DO/Obs:
-1. some firms have 0 emissions for some years. This is probably because in those
-years they were not part of the EUETS, in which case their emissions should be missing,
-and not zero. Need to fix this.
-
-2. we define firm-level emissions as the sum of emissions for all installations owned by the firm
-this might cause sharp discontinuities in firm-level emissions due to installations entering and exiting
-the EUETS (e.g. combustion installations are only included if yse > 20MWH energy).
-this might lead us to conculde that in any given year,
-any given firm is abating but its rather because the number of installation it owns covered by the EUETS
-dropped discretely
-
-not sure how to deal with this right now, but something to keep in mind
-
-3. (THIS IS IMPORTANT) check whether obs for which _merge == 2 in final merge
-are ORBIS firms for which corresponding account in account.csv are not OHA
-(and therefore are not account that belong to firms actually treated by carbon policy)
-
-As of now we are dropping if _merge == 2
-
-4. (THIS IS IMPORTANT) check why _merge == 1
-
-GJ
-*******************************************************************************/
+**************************************************************************/
 
 *------------------------------
 * Set-up folders
@@ -50,63 +20,16 @@ if "`c(username)'"=="jota_"{
 global raw_data "${dropbox}/carbon_policy_reallocation/data/raw"
 global int_data "${dropbox}/carbon_policy_reallocation/data/intermediate"
 global proc_data "${dropbox}/carbon_policy_reallocation/data/processed"
+global output "${dropbox}/carbon_policy_reallocation/output/orbis_data_quality"
+
+set seed 1640 
 
 *------------------------------
-* Read in installation-year info and calculate sum of emissions at the firm level
+* Process ORBIS data for a subset of industries in France 
+* This chunk of the code does the basic processing required to deduplicate the raw ORBIS data
 *------------------------------
-
-	use "${int_data}/installation_year_emissions.dta", clear
-	
-	g mi_bvdid = missing(bvdid)
-	*tab mi_bvdid // 10% of observations
-	// which is also 10% of installations because it's a balanced panel
-	
-	bysort bvdid year: egen firm_emissions = total(verified) if mi_bvdid == 0
-	
-	*bysort bvdid (activity_id): g act_consistent = activity_id[1] == activity_id[_N] if !missing(bvdid)
-	// not consistent across installations within bvdid
-	
-	*bysort bvdid (nace_id): g nace_consistent = nace_id[1] == nace_id[_N] if !missing(bvdid)
-	// not consistent across installations within bvdid
-	
-	// identify for each bvdid the most polluting installation across all years
-	bysort installation_id: egen installation_emissions = total(verified)
-	bysort bvdid (installation_emissions): egen max_emissions = max(installation_emissions)
-	gen max_installation_id = installation_id if installation_emissions == max_emissions
-	bysort bvdid (max_installation_id): replace max_installation_id = max_installation_id[_N]
-	
-	// create firm-level activity and nace ids
-	bysort bvdid: g bvd_activity = activity_id if installation_id == max_installation_id
-	bysort bvdid (bvd_activity): replace bvd_activity = bvd_activity[1]
-	
-	bysort bvdid: g bvd_nace = nace_id if installation_id == max_installation_id
-	bysort bvdid (bvd_nace): replace bvd_nace = bvd_nace[1]
-	
-	*bysort bvdid (bvd_activity): g act_consistent = bvd_activity[1] == bvd_activity[_N] if !missing(bvdid)
-	// consistent!
-	
-	*bysort bvdid (bvd_nace): g nace_consistent = bvd_nace[1] == bvd_nace[_N] if !missing(bvdid)
-	// consistent!
-	
-	bysort bvdid year: egen n_installations = count(installation_id)
-	
-	collapse (first) firm_emissions bvd_nace bvd_activity n_installations, by(bvdid year)
-	
-	rename bvd_nace nace_id
-	rename bvd_activity activity_id
-	
-	drop if missing(bvdid)
-	
-	save "${int_data}/firm_year_emissions.dta", replace
-	
-*------------------------------
-* Read in firm-year-level data from ORBIS
-*------------------------------
-
-	tempfile orbis
-	
-	use "${raw_data}/ORBIS/orbis_eutl_firms.dta", clear
-	
+{
+	use CLOSDATE_year AV TURN STAF TFAS CONSCODE EXCHRATE bvdid using "${raw_data}/ORBIS/orbis_FR_subset.dta", clear
 	rename CLOSDATE_year year
 	keep if year >= 2005
 	rename AV value_added
@@ -114,7 +37,7 @@ global proc_data "${dropbox}/carbon_policy_reallocation/data/processed"
 	rename STAF labor
 	rename TFAS capital
 	rename CONSCODE code
-	
+	replace sales = sales/EXCHRATE
 	// deal with duplicates across bvdid year:
 		// 1. if there are consolidated and unconsolidated obs keep the unconsolidated one
 		// this already eliminates almost all of the duplicates
@@ -231,58 +154,22 @@ global proc_data "${dropbox}/carbon_policy_reallocation/data/processed"
 	drop number dup
 	duplicates tag bvdid year, gen(dup)
 	
-	g sales_eu = sales/EXCHRATE 
-	g value_added_eu = value_added/EXCHRATE 
-	g capital_eu = capital/EXCHRATE 
-
-	keep bvdid year value_added sales_eu labor capital_eu
+	keep bvdid year value_added sales labor capital
 	
-	save "`orbis'"
+	tempfile orbis 
+	save `orbis'
 	
-*------------------------------
-* Merge firm-level emissions with firm-level ORBIS
-*------------------------------
-
-	use "${int_data}/firm_year_emissions.dta", clear
-	
-	merge 1:1 bvdid year using "`orbis'"
-	
-	// why _merge == 2?
-	// ORBIS data is subset of ORBIS firms that are present in EUTL account.csv
-	// per code "pull_bvd_id_numbers.do"
-	// there are bvdid in account.csv in EUTL that are NOT part of the EUETS
-	// e.g. trading accounts
-	// if there are trading accounts that are owned by ORBIS firms, then
-	// we will select them but they do not actually correspond to EUETS firms
-	
-	drop if _merge == 2
-	
-	// why _merge == 1? 
-	// firm-year in EUETS that are missing in ORBIS
-	// the firm is present in ORBIS for some year, otherwise it wouldnt have BvD id
-	// but for some particular year, the info is missing
-	
-	rename firm_emissions co2
-	rename value_added va
-	rename activity_id activity
-	rename nace_id nace
-	
-	drop _merge
-	
-	save "${int_data}/firm_year.dta", replace
-	
+}
 *------------------------------
 * Read in firm-level 4-digit NACE codes from ORBIS
 *------------------------------
-
+{
 	tempfile nace_orbis
 	
-	import delimited "${raw_data}/ORBIS/orbis_nace", clear
+	import delimited "${raw_data}/ORBIS/FR_subset_nace_codes", clear
 	
 	rename nacepcod2 nace
-	
-	keep if !missing(nace)
-	
+		
 	* Step 1: Sort the data by bvdid
 	bysort bvdid: gen random_order = runiform()
 
@@ -299,57 +186,115 @@ global proc_data "${dropbox}/carbon_policy_reallocation/data/processed"
 	keep bvdid nace_orbis
 	duplicates drop
 	
-	save "`nace_orbis'"
+	rename nace nace4
+
+	gen str nace_str = string(nace4, "%9.2f")
+
+
+	gen str nace2 = substr(nace_str, 1, 2) // extract digits before dot
 	
+	//replace nace2 = substr(string(nace_orbis), 1, 2) if missing(nace2)
+	replace nace2 = "" if nace2 == "."
+	replace nace2 = "0" + nace2 if strlen(nace2) == 1
+	
+	save "`nace_orbis'"
+
+}
 *------------------------------
 * Merge with NACE codes from ORBIS
 *------------------------------
+{
+	use `orbis', clear
+	keep if inrange(year, 2013,2019)
+	merge m:1 bvdid using "`nace_orbis'", assert(2 3) keep(3) nogen
 	
-	use "${int_data}/firm_year.dta", clear
-	
-	merge m:1 bvdid using "`nace_orbis'"
-	
-	drop if _merge == 2
-	
-	drop _merge
-	
-	save "${int_data}/firm_year.dta", replace	
-	
-	
-	
+	merge 1:1 bvdid  year using "${int_data}/firm_year", keep(1 3) keepusing(bvdid year)
+	g ets= _merge==3
 	
 
 	
+	g country = substr(bvdid, 1, 2)
+	keep if country=="FR"
+	gcollapse (sum) sales, by(country year nace2 ets)
+	reshape wide sales, i(country year nace2) j(ets)
+	replace sales1 = 0 if mi(sales1)
+	g output_orbis = sales0 + sales1 
+	g output_orbis_ets = sales1
 
+	ren nace2 nace
 
+	tempfile ind_country_year
+	save `ind_country_year'
+}
 
+*------------------------------
+* Read in industry-country data from Eurostat and merge to ORBIS
+*------------------------------
+{
+	import delimited "${raw_data}/Eurostat/industry_output_current_prices_v2.csv", clear
+	
+	keep nace geo time obs_value
+	
+	rename time_period year
+	rename obs_value output_eurostat
+	rename geo country
+	keep if country=="FR"
+	keep if inrange(year, 2012, 2019)
+	
+	* Drop NACE codes where we have data for each sub-industry
+	drop if nace_r2 == "C16-C18"
+	drop if nace_r2 =="C22_C23"
+	drop if nace_r2 =="C24_C25"
+	drop if nace_r2 =="C29_C30"
+	drop if nace_r2 =="C31-C33"
+	drop if nace_r2 == "J58-J60"  
 
+	g nace = substr(nace_r2, 2, 3)
+	replace nace = "1012" if nace_r2 == "C10-C12"
+	replace nace = "1315" if nace_r2 == "C13-C15"
+	replace nace = "3132" if nace_r2 == "C31_C32"
+	replace nace = "3739" if nace_r2 == "E37-E39"
+	replace nace = "5960" if nace_r2 == "J59_J60"
+	replace nace = "6263" if nace_r2 == "J62_J63"
+	replace nace = "6970" if nace_r2 == "M69_M70"
+	replace nace = "7475" if nace_r2 == "M74_M75"
+	replace nace = "8082" if nace_r2 == "N80-N82"
+	replace nace = "8788" if nace_r2 == "Q87_Q88"
+	replace nace = "9092" if nace_r2 == "R90-R92"
+	
+	drop nace_r2
+	
+	drop if strlen(country) > 2
+	
+	* fix some country codes
+	replace country = "GR" if country == "EL"
+	replace country = "GB" if country == "UK"
+		
+	merge 1:1 country year nace using `ind_country_year', ///
+		keep(3) /// 
+		assert(1 3)
 
 	
+	replace output_orbis = output_orbis*10^(-6)
+	replace output_orbis_ets = output_orbis_ets*10^(-6)
 
+	g orbis_pct = output_orbis/output_eurostat
+	
+}
 	
 	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-
-	
+*------------------------------
+* Read in industry-country data from Eurostat and merge to ORBIS
+*------------------------------
+	levelsof nace,local(industries)
+	foreach industry in  `industries'{
+		tw ///
+			(connect output_orbis year if nace=="`industry'") ///
+			(connect output_orbis_ets year if nace=="`industry'") ///
+			(connect output_eurostat year if nace=="`industry'"),  ///
+			legend(order(1 "ORBIS" 2 "ORBIS firms in ETS" 3 "Eurostat") col(3)) ///
+			title("NACE 2: `industry'") name("Ind`industry'",replace)
+		graph export "${output}/connect orbis_eurostat - FR - ind`industry'.png", replace
+		
+			
+	}

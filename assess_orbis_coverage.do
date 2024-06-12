@@ -21,7 +21,7 @@ if "`c(username)'"=="jota_"{
 global raw_data "${dropbox}/carbon_policy_reallocation/data/raw"
 global int_data "${dropbox}/carbon_policy_reallocation/data/intermediate"
 global proc_data "${dropbox}/carbon_policy_reallocation/data/processed"
-
+global output "${dropbox}/carbon_policy_reallocation/output/orbis_data_quality"
 
 *------------------------------
 * Generate country-year-sector data on output from Orbis
@@ -35,53 +35,53 @@ global proc_data "${dropbox}/carbon_policy_reallocation/data/processed"
 	
 	g country = substr(bvdid, 1, 2)
 	
-	* create sales for combined NACE codes
-	gen sales_nace0509 = sales if inlist(nace2, "05", "06", "07", "08", "09")
+	* create sales_eu for combined NACE codes
+	gen sales_nace0509 = sales_eu if inlist(nace2, "05", "06", "07", "08", "09")
 	replace sales_nace0509 = 0 if !inlist(nace2, "05", "06", "07", "08", "09")
 
-	gen sales_nace1012 = sales if inlist(nace2, "10", "11", "12")
+	gen sales_nace1012 = sales_eu if inlist(nace2, "10", "11", "12")
 	replace sales_nace1012 = 0 if !inlist(nace2, "10", "11", "12")
 	
-	gen sales_nace1315 = sales if inlist(nace2, "13", "14", "15")
+	gen sales_nace1315 = sales_eu if inlist(nace2, "13", "14", "15")
 	replace sales_nace1315 = 0 if !inlist(nace2, "13", "14", "15")
 	
-	gen sales_nace3132 = sales if inlist(nace2, "31", "32")
+	gen sales_nace3132 = sales_eu if inlist(nace2, "31", "32")
 	replace sales_nace3132 = 0 if !inlist(nace2, "31", "32")
 	
-	gen sales_nace3739 = sales if inlist(nace2, "37", "38", "39")
+	gen sales_nace3739 = sales_eu if inlist(nace2, "37", "38", "39")
 	replace sales_nace3739 = 0 if !inlist(nace2, "37", "38", "39")
 	
-	gen sales_nace4143 = sales if inlist(nace2, "41", "42", "43")
+	gen sales_nace4143 = sales_eu if inlist(nace2, "41", "42", "43")
 	replace sales_nace4143 = 0 if !inlist(nace2, "41", "42", "43")
 	
-	gen sales_nace5556 = sales if inlist(nace2, "55", "56")
+	gen sales_nace5556 = sales_eu if inlist(nace2, "55", "56")
 	replace sales_nace5556 = 0 if !inlist(nace2, "55", "56")
 	
-	gen sales_nace5960 = sales if inlist(nace2, "59", "60")
+	gen sales_nace5960 = sales_eu if inlist(nace2, "59", "60")
 	replace sales_nace5960 = 0 if !inlist(nace2, "59", "60")
 	
-	gen sales_nace6263 = sales if inlist(nace2, "62", "63")
+	gen sales_nace6263 = sales_eu if inlist(nace2, "62", "63")
 	replace sales_nace6263 = 0 if !inlist(nace2, "62", "63")
 	
-	gen sales_nace6970 = sales if inlist(nace2, "69", "70")
+	gen sales_nace6970 = sales_eu if inlist(nace2, "69", "70")
 	replace sales_nace6970 = 0 if !inlist(nace2, "69", "70")
 	
-	gen sales_nace7475 = sales if inlist(nace2, "74", "75")
+	gen sales_nace7475 = sales_eu if inlist(nace2, "74", "75")
 	replace sales_nace7475 = 0 if !inlist(nace2, "74", "75")
 	
-	gen sales_nace8082 = sales if inlist(nace2, "80", "81", "82")
+	gen sales_nace8082 = sales_eu if inlist(nace2, "80", "81", "82")
 	replace sales_nace8082 = 0 if !inlist(nace2, "80", "81", "82")
 	
-	gen sales_nace8788 = sales if inlist(nace2, "87", "88", "89")
+	gen sales_nace8788 = sales_eu if inlist(nace2, "87", "88", "89")
 	replace sales_nace8788 = 0 if !inlist(nace2, "87", "88", "89")
 	
-	gen sales_nace9092 = sales if inlist(nace2, "90", "91", "92")
+	gen sales_nace9092 = sales_eu if inlist(nace2, "90", "91", "92")
 	replace sales_nace9092 = 0 if !inlist(nace2, "90", "91", "92")
 	
-	gen sales_nace9798= sales if inlist(nace2, "97", "98")
+	gen sales_nace9798= sales_eu if inlist(nace2, "97", "98")
 	replace sales_nace9798 = 0 if !inlist(nace2, "97", "98")
 
-	* generate the sum of sales for each nace-country-year 
+	* generate the sum of sales_eu for each nace-country-year 
 	foreach v in "0509" "1012" "1315" "3132" "3739" "4143" "5556" "5960" "6263" "6970" "7475" "8082" "8788" "9092" "9798"{
 		
 		bysort country year: egen sum_sales_nace`v' = total(sales_nace`v')
@@ -89,11 +89,11 @@ global proc_data "${dropbox}/carbon_policy_reallocation/data/processed"
 
 	foreach v in "01" "02" "03" "04" "16" "17" "18" "19" "20" "21" "22" "23" "24" "25" "26" "27" "28" "29" "30" "33" "34" "35" "36" "40" "44" "45" "46" "47" "48" "49" "50" "51" "52" "53" "54" "57" "58" "61" "64" "65" "66" "67" "68" "71" "72" "73" "76" "77" "78" "79" "83" "84" "85" "86" "89" "93" "94" "95" "96" "99"{
 		
-		bysort country year: egen sum_sales_nace`v'_temp = total(sales) if nace2 == "`v'"
+		bysort country year: egen sum_sales_nace`v'_temp = total(sales_eu) if nace2 == "`v'"
 		replace sum_sales_nace`v'_temp = 0 if missing(sum_sales_nace`v'_temp)
 
 		/*
-		CW: New code below. The above lines don't assign the sales of each industry to each row. only the row with the specified industry
+		CW: New code below. The above lines don't assign the sales_eu of each industry to each row. only the row with the specified industry
 		*/
 		gegen sum_sales_nace`v' = max(sum_sales_nace`v'_temp), by(country year)
 		drop sum_sales_nace`v'_temp
@@ -120,7 +120,7 @@ global proc_data "${dropbox}/carbon_policy_reallocation/data/processed"
 	replace nace = "04" if nace == "4"
 	replace nace = "0509" if nace == "509"
 	
-	rename sum_sales output_orbis
+	rename sum_sales_nace output_orbis
 
 
 	save "${int_data}/country_sector_year_sales_orbis_wout_imputing.dta", replace
@@ -139,53 +139,53 @@ global proc_data "${dropbox}/carbon_policy_reallocation/data/processed"
 	
 	g country = substr(bvdid, 1, 2)
 	
-	* create sales for combined NACE codes
-	gen sales_nace0509 = sales if inlist(nace2, "05", "06", "07", "08", "09")
+	* create sales_eu for combined NACE codes
+	gen sales_nace0509 = sales_eu if inlist(nace2, "05", "06", "07", "08", "09")
 	replace sales_nace0509 = 0 if !inlist(nace2, "05", "06", "07", "08", "09")
 
-	gen sales_nace1012 = sales if inlist(nace2, "10", "11", "12")
+	gen sales_nace1012 = sales_eu if inlist(nace2, "10", "11", "12")
 	replace sales_nace1012 = 0 if !inlist(nace2, "10", "11", "12")
 	
-	gen sales_nace1315 = sales if inlist(nace2, "13", "14", "15")
+	gen sales_nace1315 = sales_eu if inlist(nace2, "13", "14", "15")
 	replace sales_nace1315 = 0 if !inlist(nace2, "13", "14", "15")
 	
-	gen sales_nace3132 = sales if inlist(nace2, "31", "32")
+	gen sales_nace3132 = sales_eu if inlist(nace2, "31", "32")
 	replace sales_nace3132 = 0 if !inlist(nace2, "31", "32")
 	
-	gen sales_nace3739 = sales if inlist(nace2, "37", "38", "39")
+	gen sales_nace3739 = sales_eu if inlist(nace2, "37", "38", "39")
 	replace sales_nace3739 = 0 if !inlist(nace2, "37", "38", "39")
 	
-	gen sales_nace4143 = sales if inlist(nace2, "41", "42", "43")
+	gen sales_nace4143 = sales_eu if inlist(nace2, "41", "42", "43")
 	replace sales_nace4143 = 0 if !inlist(nace2, "41", "42", "43")
 	
-	gen sales_nace5556 = sales if inlist(nace2, "55", "56")
+	gen sales_nace5556 = sales_eu if inlist(nace2, "55", "56")
 	replace sales_nace5556 = 0 if !inlist(nace2, "55", "56")
 	
-	gen sales_nace5960 = sales if inlist(nace2, "59", "60")
+	gen sales_nace5960 = sales_eu if inlist(nace2, "59", "60")
 	replace sales_nace5960 = 0 if !inlist(nace2, "59", "60")
 	
-	gen sales_nace6263 = sales if inlist(nace2, "62", "63")
+	gen sales_nace6263 = sales_eu if inlist(nace2, "62", "63")
 	replace sales_nace6263 = 0 if !inlist(nace2, "62", "63")
 	
-	gen sales_nace6970 = sales if inlist(nace2, "69", "70")
+	gen sales_nace6970 = sales_eu if inlist(nace2, "69", "70")
 	replace sales_nace6970 = 0 if !inlist(nace2, "69", "70")
 	
-	gen sales_nace7475 = sales if inlist(nace2, "74", "75")
+	gen sales_nace7475 = sales_eu if inlist(nace2, "74", "75")
 	replace sales_nace7475 = 0 if !inlist(nace2, "74", "75")
 	
-	gen sales_nace8082 = sales if inlist(nace2, "80", "81", "82")
+	gen sales_nace8082 = sales_eu if inlist(nace2, "80", "81", "82")
 	replace sales_nace8082 = 0 if !inlist(nace2, "80", "81", "82")
 	
-	gen sales_nace8788 = sales if inlist(nace2, "87", "88", "89")
+	gen sales_nace8788 = sales_eu if inlist(nace2, "87", "88", "89")
 	replace sales_nace8788 = 0 if !inlist(nace2, "87", "88", "89")
 	
-	gen sales_nace9092 = sales if inlist(nace2, "90", "91", "92")
+	gen sales_nace9092 = sales_eu if inlist(nace2, "90", "91", "92")
 	replace sales_nace9092 = 0 if !inlist(nace2, "90", "91", "92")
 	
-	gen sales_nace9798= sales if inlist(nace2, "97", "98")
+	gen sales_nace9798= sales_eu if inlist(nace2, "97", "98")
 	replace sales_nace9798 = 0 if !inlist(nace2, "97", "98")
 	
-	* generate the sum of sales for each nace-country-year 
+	* generate the sum of sales_eu for each nace-country-year 
 	foreach v in "0509" "1012" "1315" "3132" "3739" "4143" "5556" "5960" "6263" "6970" "7475" "8082" "8788" "9092" "9798"{
 		
 		bysort country year: egen sum_sales_nace`v' = total(sales_nace`v')
@@ -193,12 +193,12 @@ global proc_data "${dropbox}/carbon_policy_reallocation/data/processed"
 	
 	foreach v in "01" "02" "03" "04" "16" "17" "18" "19" "20" "21" "22" "23" "24" "25" "26" "27" "28" "29" "30" "33" "34" "35" "36" "40" "44" "45" "46" "47" "48" "49" "50" "51" "52" "53" "54" "57" "58" "61" "64" "65" "66" "67" "68" "71" "72" "73" "76" "77" "78" "79" "83" "84" "85" "86" "89" "93" "94" "95" "96" "99"{
 		
-		bysort country year: egen sum_sales_nace`v'_temp = total(sales) if nace2 == "`v'"
+		bysort country year: egen sum_sales_nace`v'_temp = total(sales_eu) if nace2 == "`v'"
 		
 		replace sum_sales_nace`v'_temp = 0 if missing(sum_sales_nace`v'_temp)
 	
 		/*
-		CW: New code below. The above lines don't assign the sales of each industry to each row. only the row with the specified industry
+		CW: New code below. The above lines don't assign the sales_eu of each industry to each row. only the row with the specified industry
 		*/
 		gegen sum_sales_nace`v' = max(sum_sales_nace`v'_temp), by(country year)
 		drop sum_sales_nace`v'_temp
@@ -228,7 +228,7 @@ global proc_data "${dropbox}/carbon_policy_reallocation/data/processed"
 	replace nace = "04" if nace == "4"
 	replace nace = "0509" if nace == "509"
 	
-	rename sum_sales output_orbis
+	rename sum_sales_nace output_orbis
 	
 	save "${int_data}/country_sector_year_sales_orbis_with_imputing.dta", replace
 
@@ -292,6 +292,7 @@ global proc_data "${dropbox}/carbon_policy_reallocation/data/processed"
 	replace nace = "9798" if nace_r2 == "T"
 	replace nace = "99" if nace_r2 == "U"
 	*/
+	
 	drop nace_r2
 	
 	drop if strlen(country) > 2
@@ -330,45 +331,66 @@ global proc_data "${dropbox}/carbon_policy_reallocation/data/processed"
 * Explore data
 *------------------------------
 
+
 	//--------------------------------
-	// Scatter: Orbis percent of Eurostat output across time
-	//--------------------------------
-	* Get a list of all of the industries where orbis makes up between 1% and 150% of Eurostat output
-	levelsof(nace) if orbis_pct>0.01 & orbis_pct<1.5, local(nace_codes)
-	
-	* Create a local to save each series 
-	loc plot 
-	loc legend 
-	loc legend_int = 1
-	
-	* Create one series (scatter) for each industry
-	
-	foreach nace of local nace_codes{
-			loc plot `plot' (scatter orbis_pct year if orbis_pct<1.5 & nace=="`nace'" & orbis_pct>0.01 ,  ///
-				mlabel("country") ///
-				mcolor(%70)  ///
-				mlabpos(`legend_int')) 
-			loc legend `legend' `legend_int' "`nace'"
-			loc legend_int = `legend_int'+1
-	}
-	
-	* Make the plot
-	preserve 
-	replace year = year + runiform(-1,1)
-	tw ///
-		`plot', ///
-		legend(order(`legend') ring(0) pos(6))
-		
-	restore
-	//--------------------------------
-	// Summarize: Percent change in output/sales from 2013 to 2019
+	// Summarize: Percent change in output/sales_eu from 2013 to 2019
 	//--------------------------------
 	isid nace country year
 
+	sum orbis_pct,  d 
 	
 	bys nace  country (year): g pct_change_eurostat = 100*(output_eurostat[2] - output_eurostat[1])/output_eurostat[1]
 	bys nace country (year): g pct_change_orbis = 100*(output_orbis[2] - output_orbis[1])/output_orbis[1]
 	
 	sum pct_change_eurostat if !mi(pct_change_orbis) ,d
+	loc eurostat_median =round(`r(p50)',2)
 	sum pct_change_orbis if !mi(pct_change_eurostat) ,d
+	loc orbis_median = round(`r(p50)',2)
+	
+	//--------------------------------
+	// Histogram: Percent change in output/sales_eu from 2013 to 2019
+	//--------------------------------
+	tw ///
+		(hist pct_change_eurostat if pct_change_eurostat<100, color(navy%30)) ///
+		(hist pct_change_orbis if pct_change_orbis<100, color(maroon%30)), ///
+		legend(order(1 "Eurostat" 2 "Orbis")) ///
+		title("Sales/Output Growth from 2013-2019: Ind x Country") ///
+		xline(`eurostat_median', lcolor(navy)) ///
+		xline(`orbis_median', lcolor(maroon))
+	graph export "${output}/histogram pct_change_output_eurostat_comp balanced panel.png", replace
+	
+	//--------------------------------
+	// Scatter: Percent change in output/sales_eu from 2013 to 2019
+	//--------------------------------
+	
+	tw /// 
+		(scatter pct_change_eurostat pct_change_orbis if pct_change_orbis<150,  ///
+				msize(small)  ///
+				mcolor(navy%70)) 		///
+		(lfit pct_change_eurostat pct_change_orbis if pct_change_orbis<150, color("black")) ///
+		(line pct_change_orbis pct_change_orbis if pct_change_orbis<150, color("red")), ///
+		legend(order(2 "Linear fit" 3 "45 degree line") ring(0) pos(11) col(1)) ///
+		xtitle("Orbis percent change (2013 to 2019)") ///
+		ytitle("Eurostat percent change (2013 to 2019)")
+	graph export "${output}/scatter pct_change_eurostat pct_change_orbis balanced panel.png", replace
+
+		
+		
+
+	//--------------------------------
+	// Scatter: Percent change in output/sales_eu from 2013 to 2019 if representative in 2013
+	//--------------------------------
+
+	tw /// 
+		(scatter pct_change_eurostat pct_change_orbis if representative_in_2013==1,  ///
+				msize(small)  ///
+				mcolor(navy%70)) 		///
+		(lfit pct_change_eurostat pct_change_orbis if representative_in_2013==1, color("black")) ///
+		(line pct_change_orbis pct_change_orbis if representative_in_2013==1, color("red")), ///
+		legend(order(2 "Linear fit" 3 "45 degree line") ring(0) pos(11) col(1)) ///
+		xtitle("Orbis percent change (2013 to 2019)") ///
+		ytitle("Eurostat percent change (2013 to 2019)")
+	graph export "${output}/scatter pct_change_eurostat pct_change_orbis balanced panel representative_in_2013.png", replace
+
+
 
