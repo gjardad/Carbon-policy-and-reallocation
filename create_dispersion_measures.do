@@ -33,6 +33,8 @@ global proc_data "${dropbox}/carbon_policy_reallocation/data/processed"
 
 	use "${int_data}/firm_year.dta", clear
 
+	* Drop observations for which we don't have sales
+	drop if mi(sales)
 *------------------------------
 * Generate productivity and dispersion measures
 *------------------------------
@@ -45,85 +47,63 @@ global proc_data "${dropbox}/carbon_policy_reallocation/data/processed"
 	gen sales_capital = log(sales/capital)
 	gen va_capital = log(va/capital)
 	
-	rename nace nace4
-	gen str nace_str = string(nace4, "%9.2f")
+	gen str nace_str = string(nace, "%9.2f")
+	replace nace_str = "0" + nace_str if strlen(nace_str)==3
+	
 	gen dot_pos = strpos(nace_str, ".")
 	gen str nace2 = substr(nace_str, 1, dot_pos - 1) // extract digits before dot
 	
-	replace nace2 = substr(string(nace_orbis), 1, 2) if missing(nace2)
+	replace nace2 = substr(nace_orbis, 1, 2) if missing(nace2)
 	replace nace2 = "" if nace2 == "."
 	
-	replace nace4 = nace_orbis if missing(nace4)
-	
-	// within-industry heterogeneity in productivity measures
+	replace nace_str = nace_orbis if missing(nace_str)
+	ren nace_str nace4
+	drop if nace4=="."
+	* Loop through each industry definition 
 	foreach ind in activity nace2 nace4{
+	
+		preserve 
 		
-		foreach var in sales_co2 va_co2 sales_labor va_labor sales_capital va_capital {
-			
-			bysort year `ind': egen mean_`ind'_`var' = mean(`var')
-			bysort year `ind': egen median_`ind'_`var' = median(`var')
-			bysort year `ind': egen p10_`ind'_`var' = pctile(`var'), p(10)
-			bysort year `ind': egen p20_`ind'_`var' = pctile(`var'), p(20)
-			bysort year `ind': egen p80_`ind'_`var' = pctile(`var'), p(80)
-			bysort year `ind': egen p90_`ind'_`var' = pctile(`var'), p(90)
-			
-			* some industries have only firm-year for which prod measure is non-missing,
-			* in which case dispersion will be 0 by construction
-			bysort year `ind': egen valid_`var'_in_`ind' = count(`var')
-		
-			// within-activity dispersion
-			bysort year `ind': egen std_`ind'_`var' = sd(`var')
-			bysort year `ind': gen p9010_`ind'_`var' = p90_`ind'_`var' - p10_`ind'_`var' 
-			bysort year `ind': gen p8020_`ind'_`var' = p80_`ind'_`var' - p20_`ind'_`var'
-
+		* Create copies of variables for the collapse 
+		* I think this is the most straightforward way to get the naming of the variables
+		foreach var in sales_co2 va_co2 sales_labor va_labor sales_capital va_capital{ 
+			g mean_`ind'_`var' = `var'
+			g median_`ind'_`var' = `var'
+			g p10_`ind'_`var' = `var'
+			g p20_`ind'_`var' = `var'
+			g p80_`ind'_`var' = `var'
+			g p90_`ind'_`var' = `var'
+			g sd_`ind'_`var' = `var'
 		}
+
+			collapse (mean) mean_* ///
+					 (median) median* ///
+					 (p10) p10_* ///
+					 (p20) p20_* ///
+					 (p80) p80_* ///
+					 (p90) p90_*  ///
+					 (sd) sd_* ///
+					 (count) ///
+						valid_`ind'_sales_co2 = sales_co2 ///
+						valid_`ind'_sales_capital = sales_capital ///
+						valid_`ind'_sales_labor = sales_labor ///
+						valid_`ind'_va_co2 = va_co2 ///
+					 , ///
+					 by(year `ind') ///
+					 cw // ignore missings, casewise deletion
+			
+		* Create the 90-10 difference variables
+		foreach var in sales_co2 va_co2 sales_labor va_labor sales_capital va_capital{ 
+
+			g p9010_`ind'_`var'= p90_`ind'_`var'-p10_`ind'_`var'
+		}
+	
+		save "${proc_data}/prod_dispersion_`ind'.dta", replace
+
+		restore 
 		
 	}
-	
-*------------------------------
-* Create dispersion data sets at the activity, nace2, and nace4 code levels
-*------------------------------
-	preserve
-	
-		collapse (first) p9010_activity_sales_co2 p9010_activity_sales_labor p9010_activity_sales_capital ///
-						 p90_activity_sales_co2 p10_activity_sales_co2 mean_activity_sales_co2 ///
-						 median_activity_sales_co2, by(activity year) 
-		
-		save "${proc_data}/prod_dispersion_activity.dta", replace
-		
-	restore
-	
-	preserve
-		
-		collapse (first) p9010_nace2_sales_co2 p9010_nace2_sales_labor p9010_nace2_sales_capital ///
-						 valid_sales_co2_in_nace2 valid_sales_labor_in_nace2 valid_sales_capital_in_nace2 ///
-						 p9010_nace2_va_co2 p9010_nace2_va_labor p9010_nace2_va_capital ///
-						 valid_va_co2_in_nace2 valid_va_labor_in_nace2 valid_va_capital_in_nace2 ///
-						 p90_nace2_sales_co2 p10_nace2_sales_co2 mean_nace2_sales_co2 ///
-						 median_nace2_sales_co2, by(nace2 year)
-						 
-		drop if missing(nace2)
 
-		save "${proc_data}/prod_dispersion_nace2.dta", replace
-		
-	restore
-	
-	preserve
-		
-		collapse (first) p9010_nace4_sales_co2 p9010_nace4_sales_labor p9010_nace4_sales_capital ///
-						 valid_sales_co2_in_nace4 valid_sales_labor_in_nace4 valid_sales_capital_in_nace4 ///
-						 p9010_nace4_va_co2 p9010_nace4_va_labor p9010_nace4_va_capital ///
-						 valid_va_co2_in_nace4 valid_va_labor_in_nace4 valid_va_capital_in_nace4 ///
-						 p90_nace4_sales_co2 p10_nace4_sales_co2 mean_nace4_sales_co2 ///
-						 median_nace4_sales_co2, by(nace4 year)
-						 
-		drop if missing(nace4)
-
-		save "${proc_data}/prod_dispersion_nace4.dta", replace
-		
-	restore
-	
-	
 	
 		
 		

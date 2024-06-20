@@ -115,6 +115,10 @@ global proc_data "${dropbox}/carbon_policy_reallocation/data/processed"
 	rename TFAS capital
 	rename CONSCODE code
 	
+	replace sales = sales/EXCHRATE 
+	replace capital = capital/EXCHRATE 
+	replace value_added = value_added/EXCHRATE
+	
 	// deal with duplicates across bvdid year:
 		// 1. if there are consolidated and unconsolidated obs keep the unconsolidated one
 		// this already eliminates almost all of the duplicates
@@ -231,11 +235,12 @@ global proc_data "${dropbox}/carbon_policy_reallocation/data/processed"
 	drop number dup
 	duplicates tag bvdid year, gen(dup)
 	
-	g sales_eu = sales/EXCHRATE 
-	g value_added_eu = value_added/EXCHRATE 
-	g capital_eu = capital/EXCHRATE 
-
-	keep bvdid year value_added sales_eu labor capital_eu
+	
+	label variable sales "Sales in euros"
+	label variable value_added "Value added in euros"
+	label variable capital "Capital in euros"
+	
+	keep bvdid year value_added sales labor capital
 	
 	save "`orbis'"
 	
@@ -292,12 +297,21 @@ global proc_data "${dropbox}/carbon_policy_reallocation/data/processed"
 	* Step 3: Create the final variable with the random nace value for each bvdid group
 	bysort bvdid: egen random_nace_final = min(random_nace)
 	
-	*bysort bvdid: g stay = (nace == random_nace_final)
-
 	rename random_nace_final nace_orbis
 	
 	keep bvdid nace_orbis
 	duplicates drop
+	
+	* Convert to a four-digit NACE code with 
+	g nace_orbis_str = string(nace_orbis)
+	replace nace_orbis_str = "0" + nace_orbis_str if strlen(nace_orbis_str)==3
+	
+	assert strlen(nace_orbis_str)==4
+	
+	replace nace_orbis_str = substr(nace_orbis_str, 1,2) + "." +  substr(nace_orbis_str, 3,2)
+	
+	drop nace_orbis 
+	ren nace_orbis_str nace_orbis
 	
 	save "`nace_orbis'"
 	
