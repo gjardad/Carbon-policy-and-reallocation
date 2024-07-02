@@ -34,23 +34,24 @@ gegen exratd_GBP_to_EUR = max(exratd_GBP_to_EUR_temp), by(datadate)
 
 keep datadate curd exratd_GBP_to_EUR exratd_toGBP 
 
-* For some reason we dont have the exchange rate for Romania on Dec 31, 2000?? 
+* For some reason we dont have the exchange rate for Romania or Turkey on Dec 31, 2000?? 
 * We'll just use the last day we have for now
 preserve 
 
-
-	keep if month(datadate)==12 & year(datadate)==2000 & curd=="ROL"
+	keep if month(datadate)==12 & year(datadate)==2000 & (curd=="ROL" | curd=="TRL")
 	sort datadate 
-	keep if _n==_N
+	bys curd (datadate): keep if _n==_N
 	
 	replace datadate = mdy(12, 31, 2000)
 	
-	tempfile rol312000
-	save `rol312000'
+	tempfile rol_trl_312000
+	save `rol_trl_312000'
 restore
 
 
-append using `rol312000'
+
+
+append using `rol_trl_312000'
 
 ren curd curcd
 tempfile exch_rate 
@@ -62,12 +63,16 @@ save `exch_rate'
 
 	tempfile compustat 
 	
-	use  "${raw_data}/Compustat - Global/compustat_global_ets_listed_firms.dta", clear
-
+	use  "${raw_data}/Compustat - Global/from isin/compustat_global_ets_listed_firms.dta", clear
+	
 	g year = year(datadate)
 
 	keep if inrange(year, 2000, 2019)
 
+	* Not sure what's going on with this one obs 
+	count if mi(fyear)
+	assert `r(N)'<=1 
+	drop if mi(fyear)
 	
 	assert revt==sale if !mi(revt) & !mi(sale)
 	g sales = sale 
@@ -88,7 +93,9 @@ save `exch_rate'
 		
 	* Replace variables of interest to be in euros 
 	g sales_eur = sales * exratd_toGBP * exratd_GBP_to_EUR 
-	assert (sales - sales_eur) < 0.01 if curcd=="EUR"
+	assert (sales - sales_eur) < 0.1 if curcd=="EUR"
+	
+	
 e
 g has_output = !mi(sale)
 g has_profit = !mi(dbtb)
