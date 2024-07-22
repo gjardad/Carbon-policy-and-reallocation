@@ -291,13 +291,7 @@ merge 1:1 gvkey year using `emissions', ///
 	keep(3) ///
 	nogen 
 
-	
-	
-merge 1:m installation_id year using "`emissions'", 
-	assert(2 3) ///
-		keep(3) ///
-		nogen 
-	
+e
 	
 save "${int_data}/compustat firm_year.dta", replace
 		
